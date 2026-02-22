@@ -1,4 +1,4 @@
-# ethrc-opentofu
+# Robot Learning OpenTofu
 
 OpenTofu IaC for an IPv6-primary EKS cluster on AWS, built for ML training workloads.
 

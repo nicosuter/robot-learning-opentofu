@@ -9,7 +9,7 @@ resource "aws_vpc" "main" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.cluster_name}-vpc"
+      Name                                        = "${var.cluster_name}-vpc"
       "kubernetes.io/cluster/${var.cluster_name}" = "shared"
     }
   )
@@ -53,11 +53,11 @@ resource "aws_internet_gateway" "main" {
 
 # Public Subnets (IPv6 primary, IPv4 dual-stack)
 resource "aws_subnet" "public" {
-  count                           = length(var.public_subnet_cidrs)
-  vpc_id                          = aws_vpc.main.id
-  cidr_block                      = var.public_subnet_cidrs[count.index]
-  availability_zone               = var.availability_zones[count.index]
-  map_public_ip_on_launch         = true
+  count                   = length(var.public_subnet_cidrs)
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_cidrs[count.index]
+  availability_zone       = var.availability_zones[count.index]
+  map_public_ip_on_launch = true
   # Automatically assign IPv6 addresses (primary)
   assign_ipv6_address_on_creation = true
   ipv6_cidr_block                 = cidrsubnet(local.vpc_ipv6_cidr_block, 8, count.index + 100)
@@ -67,7 +67,7 @@ resource "aws_subnet" "public" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.cluster_name}-public-subnet-${count.index + 1}"
+      Name                                        = "${var.cluster_name}-public-subnet-${count.index + 1}"
       "kubernetes.io/cluster/${var.cluster_name}" = "shared"
       "kubernetes.io/role/elb"                    = "1"
     }
@@ -76,10 +76,10 @@ resource "aws_subnet" "public" {
 
 # Private Subnets (IPv6 primary, IPv4 dual-stack)
 resource "aws_subnet" "private" {
-  count                           = length(var.private_subnet_cidrs)
-  vpc_id                          = aws_vpc.main.id
-  cidr_block                      = var.private_subnet_cidrs[count.index]
-  availability_zone               = var.availability_zones[count.index]
+  count             = length(var.private_subnet_cidrs)
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = var.private_subnet_cidrs[count.index]
+  availability_zone = var.availability_zones[count.index]
   # Automatically assign IPv6 addresses (primary)
   assign_ipv6_address_on_creation = true
   ipv6_cidr_block                 = cidrsubnet(local.vpc_ipv6_cidr_block, 8, count.index)
@@ -89,38 +89,35 @@ resource "aws_subnet" "private" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.cluster_name}-private-subnet-${count.index + 1}"
+      Name                                        = "${var.cluster_name}-private-subnet-${count.index + 1}"
       "kubernetes.io/cluster/${var.cluster_name}" = "shared"
       "kubernetes.io/role/internal-elb"           = "1"
     }
   )
 }
 
-# Elastic IP for NAT Gateway
+# Single NAT Gateway — IPv4 fallback only; bulk traffic uses VPC endpoints
 resource "aws_eip" "nat" {
-  count  = length(var.public_subnet_cidrs)
   domain = "vpc"
 
   tags = merge(
     var.tags,
     {
-      Name = "${var.cluster_name}-nat-eip-${count.index + 1}"
+      Name = "${var.cluster_name}-nat-eip"
     }
   )
 
   depends_on = [aws_internet_gateway.main]
 }
 
-# NAT Gateway
 resource "aws_nat_gateway" "main" {
-  count         = length(var.public_subnet_cidrs)
-  allocation_id = aws_eip.nat[count.index].id
-  subnet_id     = aws_subnet.public[count.index].id
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public[0].id
 
   tags = merge(
     var.tags,
     {
-      Name = "${var.cluster_name}-nat-${count.index + 1}"
+      Name = "${var.cluster_name}-nat"
     }
   )
 
@@ -172,7 +169,7 @@ resource "aws_route_table" "private" {
   # IPv4 default route (fallback) - via NAT Gateway
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main[count.index].id
+    nat_gateway_id = aws_nat_gateway.main.id
   }
 
   tags = merge(
@@ -292,4 +289,89 @@ resource "aws_security_group_rule" "nodes_cluster_inbound" {
   protocol                 = "tcp"
   security_group_id        = aws_security_group.eks_nodes.id
   source_security_group_id = aws_security_group.eks_cluster.id
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VPC Endpoints — keep AWS-service traffic off the NAT Gateways
+#
+# Gateway endpoints (free):
+#   s3 — training data, checkpoints, model artefacts; eliminates the biggest
+#         source of NAT egress for ML workloads
+#
+# Interface endpoints (~$0.01/hr per AZ each):
+#   ecr.api / ecr.dkr — GPU base images are 10–30 GB; pulling through NAT is
+#                        the fastest way to burn NAT bandwidth budget
+#   sts               — IRSA token exchange fires on every pod start
+#   ec2               — Karpenter node provisioning calls
+#   sqs               — Karpenter interruption queue polling
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Security group shared by all interface endpoints — allow HTTPS from within the VPC
+resource "aws_security_group" "vpc_endpoints" {
+  name        = "${var.cluster_name}-vpce-sg"
+  description = "Allow HTTPS from within the VPC to interface endpoints"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "HTTPS from VPC IPv4"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  ingress {
+    description      = "HTTPS from VPC IPv6"
+    from_port        = 443
+    to_port          = 443
+    protocol         = "tcp"
+    ipv6_cidr_blocks = [local.vpc_ipv6_cidr_block]
+  }
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+  tags = merge(var.tags, { Name = "${var.cluster_name}-vpce-sg" })
+}
+
+# ── Gateway endpoint: S3 (free) ──────────────────────────────────────────────
+
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = aws_route_table.private[*].id
+
+  tags = merge(var.tags, { Name = "${var.cluster_name}-vpce-s3" })
+}
+
+# ── Interface endpoints ───────────────────────────────────────────────────────
+
+locals {
+  interface_endpoints = {
+    "ecr.api" = "com.amazonaws.${var.region}.ecr.api"
+    "ecr.dkr" = "com.amazonaws.${var.region}.ecr.dkr"
+    "sts"     = "com.amazonaws.${var.region}.sts"
+    "ec2"     = "com.amazonaws.${var.region}.ec2"
+    "sqs"     = "com.amazonaws.${var.region}.sqs"
+  }
+}
+
+resource "aws_vpc_endpoint" "interface" {
+  for_each = local.interface_endpoints
+
+  vpc_id              = aws_vpc.main.id
+  service_name        = each.value
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+  ip_address_type     = "dualstack"
+
+  tags = merge(var.tags, { Name = "${var.cluster_name}-vpce-${each.key}" })
 }

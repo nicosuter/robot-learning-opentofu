@@ -30,13 +30,13 @@ output "cluster_certificate_authority_data" {
 }
 
 output "node_group_id" {
-  description = "EKS node group ID"
-  value       = aws_eks_node_group.main.id
+  description = "EKS system node group ID"
+  value       = aws_eks_node_group.system.id
 }
 
 output "node_group_status" {
-  description = "Status of the EKS node group"
-  value       = aws_eks_node_group.main.status
+  description = "Status of the EKS system node group"
+  value       = aws_eks_node_group.system.status
 }
 
 output "cluster_iam_role_arn" {
@@ -47,4 +47,24 @@ output "cluster_iam_role_arn" {
 output "node_iam_role_arn" {
   description = "IAM role ARN of the EKS node group"
   value       = aws_iam_role.eks_nodes.arn
+}
+
+output "node_iam_role_name" {
+  description = "IAM role name of the EKS node group (used by Karpenter EC2NodeClass)."
+  value       = aws_iam_role.eks_nodes.name
+}
+
+output "oidc_provider_arn" {
+  description = "ARN of the EKS OIDC provider."
+  value       = aws_iam_openid_connect_provider.eks.arn
+}
+
+output "karpenter_role_arn" {
+  description = "IAM role ARN for the Karpenter controller (IRSA)."
+  value       = aws_iam_role.karpenter.arn
+}
+
+output "karpenter_interruption_queue_name" {
+  description = "SQS queue name for Karpenter interruption handling."
+  value       = aws_sqs_queue.karpenter_interruption.name
 }

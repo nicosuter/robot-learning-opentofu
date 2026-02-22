@@ -13,7 +13,7 @@ variable "cluster_name" {
 variable "cluster_version" {
   description = "Kubernetes version for the EKS cluster"
   type        = string
-  default     = "1.29"
+  default     = "1.35"
 }
 
 variable "vpc_cidr" {
@@ -22,58 +22,21 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
-variable "availability_zones" {
-  description = "List of availability zones"
-  type        = list(string)
-  default     = ["eu-central-1a", "eu-central-1b", "eu-central-1c"]
-}
+variable "node_tier" {
+  description = "Compute tier for the node group: 'standard', 'gpu', or 'gpux'. GPU tiers auto-install the NVIDIA GPU Operator."
+  type        = string
+  default     = "standard"
 
-variable "private_subnet_cidrs" {
-  description = "CIDR blocks for private subnets"
-  type        = list(string)
-  default     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-}
-
-variable "public_subnet_cidrs" {
-  description = "CIDR blocks for public subnets"
-  type        = list(string)
-  default     = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
-}
-
-variable "node_group_desired_size" {
-  description = "Desired number of worker nodes"
-  type        = number
-  default     = 1
-}
-
-variable "node_group_min_size" {
-  description = "Minimum number of worker nodes (0 enables scale-to-zero via Cluster Autoscaler)"
-  type        = number
-  default     = 0
-}
-
-variable "node_group_max_size" {
-  description = "Maximum number of worker nodes"
-  type        = number
-  default     = 2
-}
-
-variable "node_instance_types" {
-  description = "Instance types for the EKS node group (GPU instances for ML workloads)"
-  type        = list(string)
-  default     = ["g5.4xlarge", "g5.8xlarge"]
+  validation {
+    condition     = contains(["standard", "gpu", "gpux"], var.node_tier)
+    error_message = "node_tier must be one of: standard, gpu, gpux."
+  }
 }
 
 variable "node_disk_size" {
-  description = "Disk size in GB for worker nodes (larger for ML models)"
+  description = "Disk size in GB for worker nodes"
   type        = number
   default     = 200
-}
-
-variable "enable_ipv6" {
-  description = "Enable IPv6 for VPC and subnets"
-  type        = bool
-  default     = true
 }
 
 variable "use_byoip_ipv6" {
@@ -117,4 +80,21 @@ variable "cluster_access" {
     policy        = string # AmazonEKSClusterAdminPolicy | AmazonEKSAdminPolicy | AmazonEKSEditPolicy | AmazonEKSViewPolicy
   }))
   default = {}
+}
+
+variable "s3_bucket_arns" {
+  description = "Additional S3 bucket ARNs to expose via the CSI driver alongside the ML data bucket."
+  type        = list(string)
+  default     = []
+}
+
+variable "gpu_node_max_lifetime" {
+  description = "Hard TTL for gpu/gpux nodes. Karpenter drains and terminates any node running longer than this duration, regardless of workload state. Go duration syntax (e.g. \"24h\", \"72h\"). Set to \"Never\" to disable."
+  type        = string
+  default     = "24h"
+}
+
+variable "ml_data_bucket_name" {
+  description = "Name of the S3 bucket for ML training data, checkpoints, and model artefacts. Must be globally unique."
+  type        = string
 }

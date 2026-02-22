@@ -1,6 +1,6 @@
 # modules/aws/eks
 
-EKS cluster with managed GPU node group, IAM roles, and IPv6-mode add-ons. Designed for ML training workloads.
+EKS cluster with IPv6 ip_family, a permanent single-node system node group (`t3.small`), Karpenter IAM/IRSA, and RBAC via Access Entries. Workload nodes are provisioned on-demand by Karpenter (configured in `modules/aws/eks-addons`).
 
 ## Usage
 
@@ -9,17 +9,14 @@ module "eks" {
   source = "./modules/aws/eks"
 
   cluster_name              = "my-cluster"
-  cluster_version           = "1.29"
+  cluster_version           = "1.35"
   vpc_id                    = module.vpc.vpc_id
   private_subnet_ids        = module.vpc.private_subnet_ids
   public_subnet_ids         = module.vpc.public_subnet_ids
   cluster_security_group_id = module.vpc.eks_cluster_security_group_id
 
-  node_group_desired_size = 2
-  node_group_min_size     = 1
-  node_group_max_size     = 10
-  node_instance_types     = ["g4dn.xlarge", "g5.xlarge"]
-  node_disk_size          = 200
+  node_disk_size        = 200 # Karpenter-provisioned workload nodes
+  system_node_disk_size = 20  # system node group (default)
 
   tags = { Project = "my-project", Environment = "production" }
 }
@@ -30,16 +27,13 @@ module "eks" {
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
 | `cluster_name` | `string` | -- | EKS cluster name |
-| `cluster_version` | `string` | `1.29` | Kubernetes version |
+| `cluster_version` | `string` | `"1.35"` | Kubernetes version |
 | `vpc_id` | `string` | -- | VPC ID |
 | `private_subnet_ids` | `list(string)` | -- | Subnets for nodes |
 | `public_subnet_ids` | `list(string)` | -- | Public subnets |
 | `cluster_security_group_id` | `string` | -- | Security group for control plane |
-| `node_group_desired_size` | `number` | `1` | Initial node count |
-| `node_group_min_size` | `number` | `0` | Minimum node count (0 = scale-to-zero) |
-| `node_group_max_size` | `number` | `2` | Maximum node count |
-| `node_instance_types` | `list(string)` | `["g5.4xlarge", "g5.8xlarge"]` | Instance types |
-| `node_disk_size` | `number` | `200` | Disk size (GB) |
+| `node_disk_size` | `number` | `200` | Disk size (GB) for Karpenter-provisioned workload nodes |
+| `system_node_disk_size` | `number` | `20` | Disk size (GB) for the permanent system node |
 | `cluster_access` | `map(object)` | `{}` | Map of IAM principals → EKS access policy (see below) |
 | `tags` | `map(string)` | `{}` | Tags applied to all resources |
 
@@ -114,16 +108,9 @@ nodeSelector:
   GPU: enabled
 ```
 
-## Scaling
+## System Node Group
 
-`desired_size` is excluded from lifecycle to allow Cluster Autoscaler to manage it.
-
-```bash
-aws eks update-nodegroup-config \
-  --cluster-name <name> \
-  --nodegroup-name <nodegroup> \
-  --scaling-config desiredSize=5
-```
+One permanent `t3.small` node (ON_DEMAND) runs 24/7, labelled `node-role=system`. It hosts Karpenter, CoreDNS, and kube-proxy. Karpenter must be running before it can provision workload nodes, so this node group has a fixed size of `min=1 / desired=1 / max=1` with no lifecycle `ignore_changes`.
 
 ## Logs
 

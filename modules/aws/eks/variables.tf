@@ -6,11 +6,11 @@ variable "cluster_name" {
 variable "cluster_version" {
   description = "Kubernetes version for the EKS cluster"
   type        = string
-  default     = "1.29"
+  default     = "1.35"
 
   validation {
     condition     = can(regex("^[0-9]+\\.[0-9]+$", var.cluster_version))
-    error_message = "cluster_version must be in the form MAJOR.MINOR (e.g. \"1.29\")."
+    error_message = "cluster_version must be in the form MAJOR.MINOR (e.g. \"1.35\")."
   }
 }
 
@@ -34,34 +34,23 @@ variable "cluster_security_group_id" {
   type        = string
 }
 
-variable "node_group_desired_size" {
-  description = "Desired number of worker nodes"
-  type        = number
-  default     = 1
-}
 
-variable "node_group_min_size" {
-  description = "Minimum number of worker nodes"
-  type        = number
-  default     = 0
-}
-
-variable "node_group_max_size" {
-  description = "Maximum number of worker nodes"
-  type        = number
-  default     = 4
-}
-
-variable "node_instance_types" {
-  description = "Instance types for the EKS node group"
-  type        = list(string)
-  default     = ["g5.4xlarge", "g5.8xlarge"]
+variable "karpenter_namespace" {
+  description = "Kubernetes namespace where Karpenter is installed."
+  type        = string
+  default     = "karpenter"
 }
 
 variable "node_disk_size" {
-  description = "Disk size in GB for worker nodes"
+  description = "Disk size in GB for Karpenter-provisioned workload nodes"
   type        = number
   default     = 200
+}
+
+variable "system_node_disk_size" {
+  description = "Disk size in GB for the system node group (Karpenter + CoreDNS)"
+  type        = number
+  default     = 20
 }
 
 variable "tags" {

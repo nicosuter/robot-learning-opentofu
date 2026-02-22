@@ -7,11 +7,13 @@ cluster_name = "ethrc-rbtl-eks-cluster"
 region       = "eu-central-1"
 
 # ---- Nodes -----------------------------------------------------------------
+# node_tier controls Karpenter NodePool selection and GPU Operator installation.
+# standard = CPU only (m5/m6i/t3, spot-eligible), gpu = p5.xlarge, gpux = p5.48xlarge
+node_tier = "standard"
 
-node_instance_types     = ["g5.4xlarge", "g5.8xlarge"]
-node_group_desired_size = 1
-node_group_min_size     = 0
-node_group_max_size     = 2
+# Hard TTL for gpu/gpux nodes. Karpenter drains and terminates any node running
+# longer than this, regardless of what's on it. Default: 24h. Set "Never" to disable.
+# gpu_node_max_lifetime = "24h"
 
 # ---- Access ----------------------------------------------------------------
 # IAM user or role ARNs for per-user kubeconfig access (no shared credentials).
@@ -37,6 +39,14 @@ use_byoip_ipv6 = false
 # use_byoip_ipv6     = true
 # byoip_ipv6_pool_id = "ipv6pool-ec2-0123456789abcdef0"
 # byoip_ipv6_cidr    = "2001:db8:1234::/56"
+
+# ---- S3 CSI ----------------------------------------------------------------
+# Uncomment and list the S3 buckets the cluster should be able to mount.
+# Leave commented out (empty list is the default) to skip driver installation.
+# s3_bucket_arns = [
+#   "arn:aws:s3:::my-training-datasets",
+#   "arn:aws:s3:::my-model-checkpoints",
+# ]
 
 # ---- Tags ------------------------------------------------------------------
 

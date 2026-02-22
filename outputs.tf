@@ -87,7 +87,21 @@ output "node_iam_role_arn" {
   description = "IAM role ARN of the EKS node group"
   value       = module.eks.node_iam_role_arn
 }
+# S3 Outputs
+output "ml_data_bucket_name" {
+  description = "Name of the ML data S3 bucket."
+  value       = module.s3_ml_data.bucket_name
+}
 
+output "ml_data_bucket_arn" {
+  description = "ARN of the ML data S3 bucket."
+  value       = module.s3_ml_data.bucket_arn
+}
+
+output "ml_data_kms_key_arn" {
+  description = "ARN of the KMS key encrypting the ML data bucket."
+  value       = module.s3_ml_data.kms_key_arn
+}
 # kubectl Configuration Command
 output "configure_kubectl" {
   description = "Command to configure kubectl"

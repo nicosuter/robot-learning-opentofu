@@ -1,34 +1,25 @@
 # Remote state backend — S3 + DynamoDB locking.
 #
-# Run once before `tofu init`:
+# Bootstrap the bucket and lock table ONCE before `tofu init`:
 #
-#   aws s3api create-bucket \
-#     --bucket <your-state-bucket> \
-#     --region eu-central-1 \
-#     --create-bucket-configuration LocationConstraint=eu-central-1
+#   tofu -chdir=modules/aws/bootstrap init
+#   tofu -chdir=modules/aws/bootstrap apply \
+#     -var="state_bucket_name=<bucket>" \
+#     -var="region=eu-central-1"
 #
-#   aws s3api put-bucket-encryption \
-#     --bucket <your-state-bucket> \
-#     --server-side-encryption-configuration \
-#       '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"aws:kms"}}]}'
+# Then initialise the root module with the values from bootstrap output:
 #
-#   aws s3api put-bucket-versioning \
-#     --bucket <your-state-bucket> \
-#     --versioning-configuration Status=Enabled
+#   tofu init \
+#     -backend-config="bucket=<state-bucket-name>" \
+#     -backend-config="dynamodb_table=<lock-table-name>"
 #
-#   aws dynamodb create-table \
-#     --table-name <your-lock-table> \
-#     --attribute-definitions AttributeName=LockID,AttributeType=S \
-#     --key-schema AttributeName=LockID,KeyType=HASH \
-#     --billing-mode PAY_PER_REQUEST \
-#     --region eu-central-1
+# Partial configuration — bucket and dynamodb_table are supplied via
+# -backend-config flags at `tofu init` time so secrets stay out of code.
 
 terraform {
   backend "s3" {
-    bucket         = "<your-state-bucket>"
-    key            = "ethrc-rbtl/eks/terraform.tfstate"
-    region         = "eu-central-1"
-    encrypt        = true
-    dynamodb_table = "<your-lock-table>"
+    key     = "ethrc-rbtl/eks/terraform.tfstate"
+    region  = "eu-central-1"
+    encrypt = true
   }
 }

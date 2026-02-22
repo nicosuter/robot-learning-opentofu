@@ -1,0 +1,58 @@
+variable "cluster_name" {
+  description = "Name of the EKS cluster."
+  type        = string
+}
+
+variable "oidc_provider_arn" {
+  description = "ARN of the EKS OIDC provider (used for IRSA)."
+  type        = string
+}
+
+variable "s3_bucket_arns" {
+  description = "S3 bucket ARNs accessible via the S3 CSI driver. Leave empty to skip driver installation."
+  type        = list(string)
+  default     = []
+}
+
+variable "node_tier" {
+  description = "Compute tier inherited from the EKS module. When set to 'gpu' or 'gpux', the NVIDIA GPU Operator is installed automatically."
+  type        = string
+
+  validation {
+    condition     = contains(["standard", "gpu", "gpux"], var.node_tier)
+    error_message = "node_tier must be one of: standard, gpu, gpux."
+  }
+}
+
+variable "karpenter_role_arn" {
+  description = "IAM role ARN for the Karpenter controller (IRSA)."
+  type        = string
+}
+
+variable "karpenter_interruption_queue_name" {
+  description = "SQS queue name for Karpenter interruption handling."
+  type        = string
+}
+
+variable "node_iam_role_name" {
+  description = "Node IAM role name for Karpenter EC2NodeClass instance profile."
+  type        = string
+}
+
+variable "node_disk_size" {
+  description = "Root volume size in GB for Karpenter-provisioned nodes."
+  type        = number
+  default     = 200
+}
+
+variable "gpu_node_max_lifetime" {
+  description = "Hard TTL for gpu/gpux NodePool nodes. Karpenter drains and terminates any node running longer than this duration. Go duration syntax (e.g. \"24h\") or \"Never\" to disable."
+  type        = string
+  default     = "24h"
+}
+
+variable "tags" {
+  description = "Common tags to apply to all resources."
+  type        = map(string)
+  default     = {}
+}

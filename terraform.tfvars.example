@@ -1,0 +1,26 @@
+# Example configuration for BYOIP IPv6
+
+# Option 1: Use BYOIP IPv6 with your own prefix
+use_byoip_ipv6        = true
+byoip_ipv6_pool_id    = "ipv6pool-ec2-0123456789abcdef0"  # AWS IPv6 pool ID from provisioning
+byoip_ipv6_cidr       = "2001:db8:1234::/56"              # Specific /56 from allocated block
+# OR let AWS allocate from the pool automatically:
+# byoip_ipv6_netmask_length = 56
+
+# Option 2: Use AWS-provided IPv6 (default)
+# use_byoip_ipv6 = false
+
+# Other configurations
+cluster_name = "ethrc-rbtl-eks-cluster"
+region       = "eu-central-1"
+
+node_instance_types     = ["g5.xlarge", "g5.2xlarge"]
+node_group_desired_size = 2
+node_group_min_size     = 1
+node_group_max_size     = 8
+
+tags = {
+  Project     = "ethrc-rbtl"
+  Environment = "production"
+  ManagedBy   = "OpenTofu"
+}

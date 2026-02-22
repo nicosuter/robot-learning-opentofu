@@ -15,6 +15,7 @@ OpenTofu configuration for an IPv6-primary EKS cluster on AWS, optimized for ML 
 ├── main.tf
 ├── variables.tf
 ├── outputs.tf
+├── backend.tf
 ├── terraform.tfvars.example
 ├── modules/
 │   └── aws/
@@ -58,6 +59,41 @@ tofu apply  # ~15-20 min
 aws eks update-kubeconfig --region eu-central-1 --name ethrc-rbtl-eks-cluster
 kubectl get nodes -o wide
 ```
+
+## Secrets & State
+
+### What is and isn't committed
+
+| Path | Committed | Reason |
+|------|-----------|--------|
+| `terraform.tfvars` | No — gitignored | Contains IAM ARNs, BYOIP pool IDs |
+| `terraform.tfstate` | No — gitignored | Contains **all output values in plaintext**, including the CA cert |
+| `backend.tf` | Yes | Just points to the S3 bucket — no credentials |
+| `.terraform.lock.hcl` | Yes | Provider version lock — ensures everyone uses the same provider build |
+| `*.tfvars.example` | Yes | Placeholders only, no real values |
+
+### Remote state (required for shared use)
+
+Local state is gitignored, so without a remote backend each person has their own state — meaning `tofu apply` from a second machine will try to recreate everything.
+
+Configure the S3 backend in `backend.tf` (already present), create the bucket and lock table once, then:
+
+```bash
+tofu init  # prompts to migrate any existing local state
+```
+
+State is stored encrypted at rest (KMS) with versioning enabled. Access is controlled by S3 bucket policy — only team members with the right IAM permissions can read or write it.
+
+### Accessing sensitive outputs
+
+Sensitive outputs (e.g. `cluster_certificate_authority_data`) are redacted in terminal output but retrievable when needed:
+
+```bash
+tofu output -raw cluster_certificate_authority_data
+tofu output -json  # all outputs including sensitive
+```
+
+These values live in state — keep the S3 bucket access-controlled and do **not** print them in CI logs.
 
 ## Variables
 

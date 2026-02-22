@@ -1,23 +1,44 @@
-# Example configuration for BYOIP IPv6
+# Copy to terraform.tfvars — this file is gitignored (*.tfvars).
+# Never commit terraform.tfvars or terraform.tfstate.
 
-# Option 1: Use BYOIP IPv6 with your own prefix
-use_byoip_ipv6        = true
-byoip_ipv6_pool_id    = "ipv6pool-ec2-0123456789abcdef0"  # AWS IPv6 pool ID from provisioning
-byoip_ipv6_cidr       = "2001:db8:1234::/56"              # Specific /56 from allocated block
-# OR let AWS allocate from the pool automatically:
-# byoip_ipv6_netmask_length = 56
+# ---- Cluster ---------------------------------------------------------------
 
-# Option 2: Use AWS-provided IPv6 (default)
-# use_byoip_ipv6 = false
-
-# Other configurations
 cluster_name = "ethrc-rbtl-eks-cluster"
 region       = "eu-central-1"
 
-node_instance_types     = ["g5.xlarge", "g5.2xlarge"]
-node_group_desired_size = 2
-node_group_min_size     = 1
-node_group_max_size     = 8
+# ---- Nodes -----------------------------------------------------------------
+
+node_instance_types     = ["g5.4xlarge", "g5.8xlarge"]
+node_group_desired_size = 1
+node_group_min_size     = 0
+node_group_max_size     = 2
+
+# ---- Access ----------------------------------------------------------------
+# IAM user or role ARNs for per-user kubeconfig access (no shared credentials).
+# Policies: AmazonEKSClusterAdminPolicy | AmazonEKSAdminPolicy
+#           AmazonEKSEditPolicy         | AmazonEKSViewPolicy
+
+cluster_access = {
+  alice = {
+    principal_arn = "arn:aws:iam::123456789012:user/alice"
+    policy        = "AmazonEKSClusterAdminPolicy"
+  }
+  bob = {
+    principal_arn = "arn:aws:iam::123456789012:role/bob-dev-role"
+    policy        = "AmazonEKSEditPolicy"
+  }
+}
+
+# ---- IPv6 ------------------------------------------------------------------
+# Option A: AWS-provided IPv6 (default)
+use_byoip_ipv6 = false
+
+# Option B: BYOIP — see docs/IPv6 BYOIP.md
+# use_byoip_ipv6     = true
+# byoip_ipv6_pool_id = "ipv6pool-ec2-0123456789abcdef0"
+# byoip_ipv6_cidr    = "2001:db8:1234::/56"
+
+# ---- Tags ------------------------------------------------------------------
 
 tags = {
   Project     = "ethrc-rbtl"

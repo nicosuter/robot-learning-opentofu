@@ -7,6 +7,11 @@ variable "cluster_version" {
   description = "Kubernetes version for the EKS cluster"
   type        = string
   default     = "1.29"
+
+  validation {
+    condition     = can(regex("^[0-9]+\\.[0-9]+$", var.cluster_version))
+    error_message = "cluster_version must be in the form MAJOR.MINOR (e.g. \"1.29\")."
+  }
 }
 
 variable "vpc_id" {
@@ -32,7 +37,7 @@ variable "cluster_security_group_id" {
 variable "node_group_desired_size" {
   description = "Desired number of worker nodes"
   type        = number
-  default     = 2
+  default     = 1
 }
 
 variable "node_group_min_size" {
@@ -72,4 +77,17 @@ variable "cluster_access" {
     policy        = string # AmazonEKSClusterAdminPolicy | AmazonEKSAdminPolicy | AmazonEKSEditPolicy | AmazonEKSViewPolicy
   }))
   default = {}
+
+  validation {
+    condition = alltrue([
+      for k, v in var.cluster_access :
+      contains([
+        "AmazonEKSClusterAdminPolicy",
+        "AmazonEKSAdminPolicy",
+        "AmazonEKSEditPolicy",
+        "AmazonEKSViewPolicy",
+      ], v.policy)
+    ])
+    error_message = "cluster_access policy must be one of: AmazonEKSClusterAdminPolicy, AmazonEKSAdminPolicy, AmazonEKSEditPolicy, AmazonEKSViewPolicy."
+  }
 }

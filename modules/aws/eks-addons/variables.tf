@@ -56,3 +56,15 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "argocd_enabled" {
+  description = "Install ArgoCD via Helm for GitOps-driven ML workload management."
+  type        = bool
+  default     = true
+}
+
+variable "argocd_chart_version" {
+  description = "Version of the argo-cd Helm chart to install."
+  type        = string
+  default     = "7.8.1"
+}

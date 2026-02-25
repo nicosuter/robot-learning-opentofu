@@ -107,3 +107,20 @@ output "configure_kubectl" {
   description = "Command to configure kubectl"
   value       = "aws eks update-kubeconfig --region ${var.region} --name ${module.eks.cluster_name}"
 }
+
+# ArgoCD Outputs
+output "argocd_installed" {
+  description = "Whether ArgoCD was installed."
+  value       = module.eks_addons.argocd_installed
+}
+
+output "argocd_namespace" {
+  description = "Namespace where ArgoCD is deployed. Use 'kubectl port-forward svc/argocd-server -n argocd 8080:443' to access the UI."
+  value       = module.eks_addons.argocd_namespace
+}
+
+output "argocd_admin_password" {
+  description = "ArgoCD initial admin password. Sensitive — rotate after first login."
+  value       = var.argocd_enabled ? data.kubernetes_secret.argocd_admin_password[0].data["password"] : null
+  sensitive   = true
+}

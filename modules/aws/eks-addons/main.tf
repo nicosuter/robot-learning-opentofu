@@ -1,6 +1,7 @@
 locals {
   install_gpu_operator = contains(["gpu", "gpux"], var.node_tier)
   install_s3_csi       = length(var.s3_bucket_arns) > 0
+  install_argocd       = var.argocd_enabled
   oidc_issuer          = regex("oidc-provider/(.+)$", var.oidc_provider_arn)[0]
 }
 
@@ -359,4 +360,134 @@ resource "kubectl_manifest" "nodepool_gpux" {
   })
 
   depends_on = [kubectl_manifest.karpenter_node_class]
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ArgoCD — GitOps controller for ML workload lifecycle management
+# Pinned to system nodes; ApplicationSet + notifications controllers enabled.
+# ─────────────────────────────────────────────────────────────────────────────
+
+resource "helm_release" "argocd" {
+  count = local.install_argocd ? 1 : 0
+
+  name             = "argocd"
+  repository       = "https://argoproj.github.io/argo-helm"
+  chart            = "argo-cd"
+  version          = var.argocd_chart_version
+  namespace        = "argocd"
+  create_namespace = true
+
+  values = [yamlencode({
+    global = {
+      # Pin all ArgoCD pods to dedicated system nodes so they are never
+      # evicted when GPU / spot nodes are reclaimed.
+      nodeSelector = { "node-role" = "system" }
+    }
+
+    server = {
+      # Expose over in-cluster service only; add an Ingress separately if needed.
+      service = { type = "ClusterIP" }
+
+      resources = {
+        requests = { cpu = "100m", memory = "128Mi" }
+        limits   = { memory = "512Mi" }
+      }
+    }
+
+    controller = {
+      resources = {
+        requests = { cpu = "250m", memory = "512Mi" }
+        limits   = { memory = "1Gi" }
+      }
+    }
+
+    repoServer = {
+      resources = {
+        requests = { cpu = "100m", memory = "256Mi" }
+        limits   = { memory = "512Mi" }
+      }
+    }
+
+    # ApplicationSet controller — required for fleet-style ML workload management
+    applicationSet = {
+      enabled = true
+      resources = {
+        requests = { cpu = "50m", memory = "64Mi" }
+        limits   = { memory = "128Mi" }
+      }
+    }
+
+    # Notifications controller — Slack / PagerDuty alerts for training job events
+    notifications = {
+      enabled = true
+      resources = {
+        requests = { cpu = "50m", memory = "64Mi" }
+        limits   = { memory = "128Mi" }
+      }
+    }
+
+    # Redis — internal cache; keep it lightweight
+    redis = {
+      resources = {
+        requests = { cpu = "50m", memory = "64Mi" }
+        limits   = { memory = "128Mi" }
+      }
+    }
+  })]
+
+  depends_on = [
+    aws_eks_addon.coredns,
+    helm_release.karpenter,
+  ]
+}
+
+# ArgoCD AppProject: ml-workloads
+# Scopes ML training jobs, experiment trackers, and model servers to a
+# dedicated project with its own RBAC boundary.
+resource "kubectl_manifest" "argocd_ml_project" {
+  count = local.install_argocd ? 1 : 0
+
+  yaml_body = yamlencode({
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "AppProject"
+    metadata = {
+      name      = "ml-workloads"
+      namespace = "argocd"
+      annotations = {
+        "argocd.argoproj.io/sync-wave" = "0"
+      }
+    }
+    spec = {
+      description = "ML training, experiment tracking, and model serving workloads"
+
+      # Allow syncing from any repository; tighten to specific repos as needed.
+      sourceRepos = ["*"]
+
+      destinations = [
+        # ML workloads namespace
+        { server = "https://kubernetes.default.svc", namespace = "ml-workloads" },
+        # Allow GPU-namespace workloads (e.g. Kubeflow pipelines)
+        { server = "https://kubernetes.default.svc", namespace = "kubeflow" },
+      ]
+
+      # Permit common ML infrastructure CRDs
+      clusterResourceWhitelist = [
+        { group = "", kind = "Namespace" },
+        { group = "rbac.authorization.k8s.io", kind = "ClusterRole" },
+        { group = "rbac.authorization.k8s.io", kind = "ClusterRoleBinding" },
+        { group = "storage.k8s.io", kind = "StorageClass" },
+        # Karpenter NodePool expansion triggered by ML workload demand
+        { group = "karpenter.sh", kind = "NodePool" },
+        { group = "karpenter.k8s.aws", kind = "EC2NodeClass" },
+      ]
+
+      namespaceResourceWhitelist = [
+        { group = "*", kind = "*" },
+      ]
+
+      orphanedResources = { warn = true }
+    }
+  })
+
+  depends_on = [helm_release.argocd]
 }

@@ -98,3 +98,15 @@ variable "ml_data_bucket_name" {
   description = "Name of the S3 bucket for ML training data, checkpoints, and model artefacts. Must be globally unique."
   type        = string
 }
+
+variable "argocd_enabled" {
+  description = "Install ArgoCD for GitOps-driven ML workload management."
+  type        = bool
+  default     = true
+}
+
+variable "argocd_chart_version" {
+  description = "Version of the argo-cd Helm chart to install."
+  type        = string
+  default     = "7.8.1"
+}

@@ -18,6 +18,10 @@ terraform {
       source  = "hashicorp/tls"
       version = "~> 4.0"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.0"
+    }
   }
 }
 
@@ -49,6 +53,29 @@ provider "kubectl" {
     command     = "aws"
     args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", var.region]
   }
+}
+
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", var.region]
+  }
+}
+
+# ArgoCD initial admin secret — populated by Helm after ArgoCD is installed
+data "kubernetes_secret" "argocd_admin_password" {
+  count = var.argocd_enabled ? 1 : 0
+
+  metadata {
+    name      = "argocd-initial-admin-secret"
+    namespace = "argocd"
+  }
+
+  depends_on = [module.eks_addons]
 }
 
 # VPC Module
@@ -99,6 +126,10 @@ module "eks_addons" {
   node_iam_role_name                = module.eks.node_iam_role_name
   s3_bucket_arns                    = concat([module.s3_ml_data.bucket_arn], var.s3_bucket_arns)
   gpu_node_max_lifetime             = var.gpu_node_max_lifetime
+
+  # ArgoCD
+  argocd_enabled       = var.argocd_enabled
+  argocd_chart_version = var.argocd_chart_version
 
   tags = var.tags
 

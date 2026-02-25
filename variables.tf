@@ -110,3 +110,9 @@ variable "argocd_chart_version" {
   type        = string
   default     = "7.8.1"
 }
+
+variable "argocd_source_repos" {
+  description = "List of git repository URLs the ml-workloads AppProject is allowed to sync from. Restrict to specific repo URLs in production to prevent syncing from untrusted sources."
+  type        = list(string)
+  default     = ["*"]
+}

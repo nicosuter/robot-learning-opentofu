@@ -377,6 +377,12 @@ resource "helm_release" "argocd" {
   namespace        = "argocd"
   create_namespace = true
 
+  # wait=true blocks until all Deployments are Available and CRDs are established,
+  # which prevents the AppProject kubectl_manifest below from racing the CRD registration.
+  wait         = true
+  wait_for_jobs = true
+  timeout      = 600
+
   values = [yamlencode({
     global = {
       # Pin all ArgoCD pods to dedicated system nodes so they are never
@@ -390,21 +396,21 @@ resource "helm_release" "argocd" {
 
       resources = {
         requests = { cpu = "100m", memory = "128Mi" }
-        limits   = { memory = "512Mi" }
+        limits   = { cpu = "500m", memory = "512Mi" }
       }
     }
 
     controller = {
       resources = {
         requests = { cpu = "250m", memory = "512Mi" }
-        limits   = { memory = "1Gi" }
+        limits   = { cpu = "1000m", memory = "1Gi" }
       }
     }
 
     repoServer = {
       resources = {
         requests = { cpu = "100m", memory = "256Mi" }
-        limits   = { memory = "512Mi" }
+        limits   = { cpu = "500m", memory = "512Mi" }
       }
     }
 
@@ -413,7 +419,7 @@ resource "helm_release" "argocd" {
       enabled = true
       resources = {
         requests = { cpu = "50m", memory = "64Mi" }
-        limits   = { memory = "128Mi" }
+        limits   = { cpu = "200m", memory = "128Mi" }
       }
     }
 
@@ -422,7 +428,7 @@ resource "helm_release" "argocd" {
       enabled = true
       resources = {
         requests = { cpu = "50m", memory = "64Mi" }
-        limits   = { memory = "128Mi" }
+        limits   = { cpu = "200m", memory = "128Mi" }
       }
     }
 
@@ -430,7 +436,7 @@ resource "helm_release" "argocd" {
     redis = {
       resources = {
         requests = { cpu = "50m", memory = "64Mi" }
-        limits   = { memory = "128Mi" }
+        limits   = { cpu = "200m", memory = "128Mi" }
       }
     }
   })]
@@ -453,15 +459,13 @@ resource "kubectl_manifest" "argocd_ml_project" {
     metadata = {
       name      = "ml-workloads"
       namespace = "argocd"
-      annotations = {
-        "argocd.argoproj.io/sync-wave" = "0"
-      }
     }
     spec = {
       description = "ML training, experiment tracking, and model serving workloads"
 
-      # Allow syncing from any repository; tighten to specific repos as needed.
-      sourceRepos = ["*"]
+      # Restrict to explicit source repos. Wildcard left as default but callers
+      # should override argocd_source_repos to a specific list in production.
+      sourceRepos = var.argocd_source_repos
 
       destinations = [
         # ML workloads namespace
@@ -470,11 +474,12 @@ resource "kubectl_manifest" "argocd_ml_project" {
         { server = "https://kubernetes.default.svc", namespace = "kubeflow" },
       ]
 
-      # Permit common ML infrastructure CRDs
+      # Cluster-scoped resources the project may manage.
+      # ClusterRole / ClusterRoleBinding are intentionally excluded: granting
+      # GitOps control over RBAC primitives allows privilege escalation from
+      # any repo that the project trusts.
       clusterResourceWhitelist = [
         { group = "", kind = "Namespace" },
-        { group = "rbac.authorization.k8s.io", kind = "ClusterRole" },
-        { group = "rbac.authorization.k8s.io", kind = "ClusterRoleBinding" },
         { group = "storage.k8s.io", kind = "StorageClass" },
         # Karpenter NodePool expansion triggered by ML workload demand
         { group = "karpenter.sh", kind = "NodePool" },

@@ -130,6 +130,7 @@ module "eks_addons" {
   # ArgoCD
   argocd_enabled       = var.argocd_enabled
   argocd_chart_version = var.argocd_chart_version
+  argocd_source_repos  = var.argocd_source_repos
 
   tags = var.tags
 

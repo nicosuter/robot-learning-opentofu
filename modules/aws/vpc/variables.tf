@@ -17,7 +17,7 @@ variable "vpc_cidr" {
 variable "availability_zones" {
   description = "Availability zones to deploy into. Single entry = single-AZ (default, no redundancy)."
   type        = list(string)
-  default     = ["eu-central-1a"]
+  default     = ["us-east-1a"]
 }
 
 variable "private_subnet_cidrs" {

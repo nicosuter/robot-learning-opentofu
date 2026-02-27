@@ -24,7 +24,7 @@ output "backend_config_snippet" {
     terraform {
       backend "s3" {
         bucket         = "${aws_s3_bucket.state.id}"
-        key            = "ethrc-rbtl/eks/terraform.tfstate"
+        key            = "ethrc-prod-1/eks/terraform.tfstate"
         region         = "${var.region}"
         encrypt        = true
         dynamodb_table = "${aws_dynamodb_table.lock.id}"

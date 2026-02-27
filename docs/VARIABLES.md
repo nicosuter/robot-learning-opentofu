@@ -8,8 +8,8 @@ All input variables for the root module. Set them in `terraform.tfvars` (copy fr
 
 | Variable | Type | Default | Description |
 |---|---|---|---|
-| `region` | `string` | `eu-central-1` | AWS region |
-| `cluster_name` | `string` | `ethrc-rbtl-eks-cluster` | EKS cluster name |
+| `region` | `string` | `us-east-1` | AWS region |
+| `cluster_name` | `string` | `ethrc-prod-1` | EKS cluster name |
 | `cluster_version` | `string` | `1.35` | Kubernetes version |
 
 ---
@@ -87,7 +87,7 @@ The S3 CSI driver is only installed when at least one bucket ARN is present (the
 Default tags:
 ```hcl
 {
-  Project     = "ethrc-rbtl"
+  Project     = "ethrc-prod-1"
   Environment = "development"
   ManagedBy   = "OpenTofu"
 }

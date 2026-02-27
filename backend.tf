@@ -18,7 +18,7 @@
 
 terraform {
   backend "s3" {
-    key     = "ethrc-rbtl/eks/terraform.tfstate"
+    key     = "hercules/eks/terraform.tfstate"
     region  = "eu-central-1"
     encrypt = true
   }

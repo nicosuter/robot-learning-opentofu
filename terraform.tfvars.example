@@ -3,8 +3,8 @@
 
 # ---- Cluster ---------------------------------------------------------------
 
-cluster_name = "ethrc-rbtl-eks-cluster"
-region       = "eu-central-1"
+cluster_name = "ethrc-prod-1"
+region       = "us-east-1"
 
 # ---- Nodes -----------------------------------------------------------------
 # node_tier controls Karpenter NodePool selection and GPU Operator installation.
@@ -51,7 +51,7 @@ use_byoip_ipv6 = false
 # ---- Tags ------------------------------------------------------------------
 
 tags = {
-  Project     = "ethrc-rbtl"
+  Project     = "ethrc-prod-1"
   Environment = "production"
   ManagedBy   = "OpenTofu"
 }

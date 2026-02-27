@@ -53,7 +53,7 @@ openssl base64 -in signature.bin -out signature.txt -A
 ### 3. Provision and advertise
 
 ```bash
-export AWS_REGION=eu-central-1
+export AWS_REGION=us-east-1
 export IPV6_CIDR="2001:db8:1234::/48"
 
 aws ec2 provision-byoip-cidr \

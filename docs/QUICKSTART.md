@@ -33,7 +33,7 @@ cp terraform.tfvars.example terraform.tfvars
 At minimum, set:
 
 ```hcl
-cluster_name        = "ethrc-rbtl-eks-cluster"
+cluster_name        = "ethrc-prod-1"
 ml_data_bucket_name = "your-globally-unique-bucket-name"
 
 cluster_access = {
@@ -113,7 +113,7 @@ Available policies: `AmazonEKSClusterAdminPolicy`, `AmazonEKSAdminPolicy`, `Amaz
 Each user then runs:
 
 ```bash
-aws eks update-kubeconfig --region eu-central-1 --name <cluster_name>
+aws eks update-kubeconfig --region us-east-1 --name <cluster_name>
 ```
 
 ---

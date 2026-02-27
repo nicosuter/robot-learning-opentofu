@@ -1,4 +1,4 @@
-# Robot Learning OpenTofu
+# Hercules
 
 OpenTofu IaC for an IPv6-primary EKS cluster on AWS, built for ML training workloads.
 

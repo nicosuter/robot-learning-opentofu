@@ -15,12 +15,12 @@ variable "s3_bucket_arns" {
 }
 
 variable "node_tier" {
-  description = "Compute tier inherited from the EKS module. When set to 'gpu' or 'gpux', the NVIDIA GPU Operator is installed automatically."
+  description = "Compute tier inherited from the EKS module. When set to 'gpum' or 'gpul', the NVIDIA GPU Operator is installed automatically."
   type        = string
 
   validation {
-    condition     = contains(["standard", "gpu", "gpux"], var.node_tier)
-    error_message = "node_tier must be one of: standard, gpu, gpux."
+    condition     = contains(["cpu", "gpum", "gpul"], var.node_tier)
+    error_message = "node_tier must be one of: cpu, gpum, gpul."
   }
 }
 
@@ -46,9 +46,9 @@ variable "node_disk_size" {
 }
 
 variable "gpu_node_max_lifetime" {
-  description = "Hard TTL for gpu/gpux NodePool nodes. Karpenter drains and terminates any node running longer than this duration. Go duration syntax (e.g. \"24h\") or \"Never\" to disable."
+  description = "Hard TTL for gpum/gpul NodePool nodes. Karpenter drains and terminates any node running longer than this duration. Go duration syntax (e.g. \"24h\") or \"Never\" to disable."
   type        = string
-  default     = "24h"
+  default     = "16h"
 }
 
 variable "tags" {

@@ -73,15 +73,15 @@ Set `node_tier` in `terraform.tfvars` to control what Karpenter provisions:
 
 | Tier | Hardware | Use case |
 |---|---|---|
-| `standard` | m5/m6i/t3, spot-eligible | CPU workloads |
-| `gpu` | p5.xlarge (1× H100) | Single-GPU training |
-| `gpux` | p5.48xlarge (8× H100) | Multi-GPU training |
+| `cpu` | m5/m6i/t3, spot-eligible | CPU workloads |
+| `gpum` | g6e.4xlarge (1× L40S) | Mid-tier GPU inference/training |
+| `gpul` | p5.xlarge (1× H100) | Single-GPU training |
 
-The NVIDIA GPU Operator is installed automatically for `gpu` and `gpux` tiers. To target GPU nodes in a pod spec:
+The NVIDIA GPU Operator is installed automatically for `gpum` and `gpul` tiers. To target GPU nodes in a pod spec:
 
 ```yaml
 nodeSelector:
-  karpenter.sh/nodepool: gpu   # or gpux
+  karpenter.sh/nodepool: gpul   # or gpum
 resources:
   limits:
     nvidia.com/gpu: 1

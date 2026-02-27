@@ -6,8 +6,8 @@ OpenTofu IaC for an IPv6-primary EKS cluster on AWS, built for ML training workl
 
 - **VPC** — dual-stack, IPv6-primary across 3 AZs (AWS-provided or BYOIP)
 - **EKS** — Kubernetes cluster with Karpenter node autoscaling
-- **Nodes** — CPU (standard), single-GPU (gpu), or 8×GPU (gpux) tiers
-- **Add-ons** — Karpenter, CoreDNS, VPC CNI, EBS CSI, NVIDIA GPU Operator (gpu/gpux only), S3 CSI
+- **Nodes** — CPU (cpu), mid-GPU (gpum), or single-GPU (gpul) tiers
+- **Add-ons** — Karpenter, CoreDNS, VPC CNI, EBS CSI, NVIDIA GPU Operator (gpum/gpul only), S3 CSI
 - **S3** — KMS-encrypted bucket for ML data, checkpoints, and model artefacts
 
 ## Quick start

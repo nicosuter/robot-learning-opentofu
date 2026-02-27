@@ -1,5 +1,5 @@
 locals {
-  install_gpu_operator = contains(["gpu", "gpux"], var.node_tier)
+  install_gpu_operator = contains(["gpum", "gpul"], var.node_tier)
   install_s3_csi       = length(var.s3_bucket_arns) > 0
   install_argocd       = var.argocd_enabled
   oidc_issuer          = regex("oidc-provider/(.+)$", var.oidc_provider_arn)[0]
@@ -182,7 +182,7 @@ resource "aws_eks_addon" "s3_csi" {
 }
 
 # ──────────────────────────────────────────────
-# NVIDIA GPU Operator (gpu / gpux tiers only)
+# NVIDIA GPU Operator (gpum / gpul tiers only)
 # ──────────────────────────────────────────────
 # EKS GPU-optimised AMIs ship with NVIDIA drivers pre-installed, so
 # driver.enabled=false tells the operator to skip driver installation and only
@@ -277,15 +277,15 @@ resource "kubectl_manifest" "karpenter_node_class" {
   depends_on = [helm_release.karpenter]
 }
 
-# NodePool: standard — general-purpose, spot-eligible, auto-consolidating
-resource "kubectl_manifest" "nodepool_standard" {
+# NodePool: cpu — general-purpose, spot-eligible, auto-consolidating
+resource "kubectl_manifest" "nodepool_cpu" {
   yaml_body = yamlencode({
     apiVersion = "karpenter.sh/v1"
     kind       = "NodePool"
-    metadata   = { name = "standard" }
+    metadata   = { name = "cpu" }
     spec = {
       template = {
-        metadata = { labels = { "node-tier" = "standard" } }
+        metadata = { labels = { "node-tier" = "cpu" } }
         spec = {
           nodeClassRef = { group = "karpenter.k8s.aws", kind = "EC2NodeClass", name = "default" }
           requirements = [
@@ -304,15 +304,44 @@ resource "kubectl_manifest" "nodepool_standard" {
   depends_on = [kubectl_manifest.karpenter_node_class]
 }
 
-# NodePool: gpu — single p5 GPU node, on-demand only
-resource "kubectl_manifest" "nodepool_gpu" {
+# NodePool: gpum — mid-tier g6e.4xlarge GPU node (1× L40S), on-demand only
+resource "kubectl_manifest" "nodepool_gpum" {
   yaml_body = yamlencode({
     apiVersion = "karpenter.sh/v1"
     kind       = "NodePool"
-    metadata   = { name = "gpu" }
+    metadata   = { name = "gpum" }
     spec = {
       template = {
-        metadata = { labels = { "node-tier" = "gpu" } }
+        metadata = { labels = { "node-tier" = "gpum" } }
+        spec = {
+          nodeClassRef = { group = "karpenter.k8s.aws", kind = "EC2NodeClass", name = "default" }
+          expireAfter  = var.gpu_node_max_lifetime
+          requirements = [
+            { key = "karpenter.sh/capacity-type", operator = "In", values = ["on-demand"] },
+            { key = "karpenter.k8s.aws/instance-family", operator = "In", values = ["g6e"] },
+            { key = "karpenter.k8s.aws/instance-size", operator = "In", values = ["4xlarge"] },
+            { key = "kubernetes.io/arch", operator = "In", values = ["amd64"] },
+          ]
+          taints = [{ key = "nvidia.com/gpu", value = "true", effect = "NoSchedule" }]
+        }
+      }
+      limits     = { "nvidia.com/gpu" = "1" }
+      disruption = { consolidationPolicy = "WhenEmpty", consolidateAfter = "5m" }
+    }
+  })
+
+  depends_on = [kubectl_manifest.karpenter_node_class]
+}
+
+# NodePool: gpul — single p5.xlarge GPU node (1× H100), on-demand only
+resource "kubectl_manifest" "nodepool_gpul" {
+  yaml_body = yamlencode({
+    apiVersion = "karpenter.sh/v1"
+    kind       = "NodePool"
+    metadata   = { name = "gpul" }
+    spec = {
+      template = {
+        metadata = { labels = { "node-tier" = "gpul" } }
         spec = {
           nodeClassRef = { group = "karpenter.k8s.aws", kind = "EC2NodeClass", name = "default" }
           expireAfter  = var.gpu_node_max_lifetime
@@ -333,34 +362,6 @@ resource "kubectl_manifest" "nodepool_gpu" {
   depends_on = [kubectl_manifest.karpenter_node_class]
 }
 
-# NodePool: gpux — full NVLink p5.48xlarge, on-demand only
-resource "kubectl_manifest" "nodepool_gpux" {
-  yaml_body = yamlencode({
-    apiVersion = "karpenter.sh/v1"
-    kind       = "NodePool"
-    metadata   = { name = "gpux" }
-    spec = {
-      template = {
-        metadata = { labels = { "node-tier" = "gpux" } }
-        spec = {
-          nodeClassRef = { group = "karpenter.k8s.aws", kind = "EC2NodeClass", name = "default" }
-          expireAfter  = var.gpu_node_max_lifetime
-          requirements = [
-            { key = "karpenter.sh/capacity-type", operator = "In", values = ["on-demand"] },
-            { key = "karpenter.k8s.aws/instance-family", operator = "In", values = ["p5"] },
-            { key = "karpenter.k8s.aws/instance-size", operator = "In", values = ["48xlarge"] },
-            { key = "kubernetes.io/arch", operator = "In", values = ["amd64"] },
-          ]
-          taints = [{ key = "nvidia.com/gpu", value = "true", effect = "NoSchedule" }]
-        }
-      }
-      limits     = { "nvidia.com/gpu" = "16" }
-      disruption = { consolidationPolicy = "WhenEmpty", consolidateAfter = "10m" }
-    }
-  })
-
-  depends_on = [kubectl_manifest.karpenter_node_class]
-}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ArgoCD — GitOps controller for ML workload lifecycle management

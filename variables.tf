@@ -23,13 +23,13 @@ variable "vpc_cidr" {
 }
 
 variable "node_tier" {
-  description = "Compute tier for the node group: 'standard', 'gpu', or 'gpux'. GPU tiers auto-install the NVIDIA GPU Operator."
+  description = "Compute tier for the node group: 'cpu', 'gpum', or 'gpul'. GPU tiers auto-install the NVIDIA GPU Operator."
   type        = string
-  default     = "standard"
+  default     = "cpu"
 
   validation {
-    condition     = contains(["standard", "gpu", "gpux"], var.node_tier)
-    error_message = "node_tier must be one of: standard, gpu, gpux."
+    condition     = contains(["cpu", "gpum", "gpul"], var.node_tier)
+    error_message = "node_tier must be one of: cpu, gpum, gpul."
   }
 }
 
@@ -89,9 +89,9 @@ variable "s3_bucket_arns" {
 }
 
 variable "gpu_node_max_lifetime" {
-  description = "Hard TTL for gpu/gpux nodes. Karpenter drains and terminates any node running longer than this duration, regardless of workload state. Go duration syntax (e.g. \"24h\", \"72h\"). Set to \"Never\" to disable."
+  description = "Hard TTL for gpum/gpul nodes. Karpenter drains and terminates any node running longer than this duration, regardless of workload state. Go duration syntax (e.g. \"24h\", \"72h\"). Set to \"Never\" to disable."
   type        = string
-  default     = "24h"
+  default     = "16h"
 }
 
 variable "ml_data_bucket_name" {

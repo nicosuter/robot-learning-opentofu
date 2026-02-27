@@ -1,14 +1,16 @@
 # Hercules
 
-OpenTofu IaC for an IPv6-primary EKS cluster on AWS, built for ML training workloads.
+Cluster orchestration for the ETHRC organisation. OpenTofu IaC that provisions an IPv6-primary EKS cluster on AWS with GPU autoscaling and GitOps, purpose-built for ML training workloads.
 
 ## What it deploys
 
 - **VPC** — dual-stack, IPv6-primary across 3 AZs (AWS-provided or BYOIP)
 - **EKS** — Kubernetes cluster with Karpenter node autoscaling
-- **Nodes** — CPU (cpu), mid-GPU (gpum), or single-GPU (gpul) tiers
-- **Add-ons** — Karpenter, CoreDNS, VPC CNI, EBS CSI, NVIDIA GPU Operator (gpum/gpul only), S3 CSI
+- **Nodes** — CPU (`cpu`), mid-GPU (`gpum`), or single-GPU (`gpul`) tiers
+- **Add-ons** — Karpenter, CoreDNS, VPC CNI, EBS CSI, NVIDIA GPU Operator (GPU tiers), S3 CSI
+- **ArgoCD** — GitOps-driven workload delivery with per-project repo whitelisting
 - **S3** — KMS-encrypted bucket for ML data, checkpoints, and model artefacts
+- **Cost controls** — GPU node TTL (`gpu_node_max_lifetime`) and a cost killswitch script
 
 ## Quick start
 
@@ -44,9 +46,16 @@ terraform.tfvars.example  # copy → terraform.tfvars
 modules/aws/
   vpc/                    # dual-stack VPC
   eks/                    # EKS cluster + IAM
-  eks-addons/             # Karpenter, GPU Operator, S3 CSI
+  eks-addons/             # Karpenter, GPU Operator, ArgoCD, S3 CSI
   s3/                     # ML data bucket
+
+scripts/
+  cost-killswitch.py      # emergency spend brake
 ```
+
+## Access
+
+Team access is managed through the `cluster_access` variable — a map of IAM principals to EKS access policies (`ClusterAdmin`, `Admin`, `Edit`, `View`). See [VARIABLES](docs/VARIABLES.md) for details.
 
 ## State
 

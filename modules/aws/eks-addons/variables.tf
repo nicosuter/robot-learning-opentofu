@@ -74,3 +74,9 @@ variable "argocd_source_repos" {
   type        = list(string)
   default     = ["*"]
 }
+
+variable "workload_namespaces" {
+  description = "Namespaces to create and allow ArgoCD ml-workloads to deploy into."
+  type        = list(string)
+  default     = ["robot-learning", "humanoid", "aeronautics", "cybersecurity"]
+}

@@ -5,7 +5,7 @@
 #   tofu -chdir=modules/aws/bootstrap init
 #   tofu -chdir=modules/aws/bootstrap apply \
 #     -var="state_bucket_name=<bucket>" \
-#     -var="region=eu-central-1"
+#     -var="region=us-east-1"
 #
 # Then initialise the root module with the values from bootstrap output:
 #
@@ -19,7 +19,7 @@
 terraform {
   backend "s3" {
     key     = "hercules/eks/terraform.tfstate"
-    region  = "eu-central-1"
+    region  = "us-east-1"
     encrypt = true
   }
 }

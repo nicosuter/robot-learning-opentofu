@@ -6,6 +6,22 @@ locals {
 }
 
 # ──────────────────────────────────────────────
+# Workload namespaces — created at apply time for ArgoCD to deploy into
+# ──────────────────────────────────────────────
+
+resource "kubernetes_namespace" "workload" {
+  for_each = toset(var.workload_namespaces)
+
+  metadata {
+    name = each.value
+
+    labels = {
+      "app.kubernetes.io/managed-by" = "tofu"
+    }
+  }
+}
+
+# ──────────────────────────────────────────────
 # AWS-managed EKS add-ons
 # ──────────────────────────────────────────────
 
@@ -468,12 +484,13 @@ resource "kubectl_manifest" "argocd_ml_project" {
       # should override argocd_source_repos to a specific list in production.
       sourceRepos = var.argocd_source_repos
 
-      destinations = [
-        # ML workloads namespace
-        { server = "https://kubernetes.default.svc", namespace = "ml-workloads" },
-        # Allow GPU-namespace workloads (e.g. Kubeflow pipelines)
-        { server = "https://kubernetes.default.svc", namespace = "kubeflow" },
-      ]
+      destinations = concat(
+        [
+          { server = "https://kubernetes.default.svc", namespace = "ml-workloads" },
+          { server = "https://kubernetes.default.svc", namespace = "kubeflow" },
+        ],
+        [for ns in var.workload_namespaces : { server = "https://kubernetes.default.svc", namespace = ns }]
+      )
 
       # Cluster-scoped resources the project may manage.
       # ClusterRole / ClusterRoleBinding are intentionally excluded: granting

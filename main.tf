@@ -27,6 +27,7 @@ terraform {
 
 # Configure the AWS Provider
 provider "aws" {
+  profile = "ethrc"
   region = var.region
 }
 
@@ -86,6 +87,10 @@ module "vpc" {
   region       = var.region
   vpc_cidr     = var.vpc_cidr
 
+  availability_zones   = coalesce(var.availability_zones, ["${var.region}a", "${var.region}b"])
+  private_subnet_cidrs = coalesce(var.private_subnet_cidrs, ["10.0.1.0/24", "10.0.2.0/24"])
+  public_subnet_cidrs  = coalesce(var.public_subnet_cidrs, ["10.0.101.0/24", "10.0.102.0/24"])
+
   # IPv6 Configuration
   use_byoip_ipv6            = var.use_byoip_ipv6
   byoip_ipv6_pool_id        = var.byoip_ipv6_pool_id
@@ -131,6 +136,8 @@ module "eks_addons" {
   argocd_enabled       = var.argocd_enabled
   argocd_chart_version = var.argocd_chart_version
   argocd_source_repos  = var.argocd_source_repos
+
+  workload_namespaces = var.workload_namespaces
 
   tags = var.tags
 

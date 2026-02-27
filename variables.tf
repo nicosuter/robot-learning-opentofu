@@ -22,6 +22,24 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
+variable "availability_zones" {
+  description = "Availability zones for subnets. EKS requires at least two."
+  type        = list(string)
+  default     = null
+}
+
+variable "private_subnet_cidrs" {
+  description = "CIDR blocks for private subnets (one per AZ)"
+  type        = list(string)
+  default     = null
+}
+
+variable "public_subnet_cidrs" {
+  description = "CIDR blocks for public subnets (one per AZ)"
+  type        = list(string)
+  default     = null
+}
+
 variable "node_tier" {
   description = "Compute tier for the node group: 'cpu', 'gpum', or 'gpul'. GPU tiers auto-install the NVIDIA GPU Operator."
   type        = string
@@ -115,4 +133,10 @@ variable "argocd_source_repos" {
   description = "List of git repository URLs the ml-workloads AppProject is allowed to sync from. Restrict to specific repo URLs in production to prevent syncing from untrusted sources."
   type        = list(string)
   default     = ["*"]
+}
+
+variable "workload_namespaces" {
+  description = "Namespaces to create and allow ArgoCD ml-workloads to deploy into."
+  type        = list(string)
+  default     = ["robot-learning", "humanoid", "aeronautics", "cybersecurity"]
 }

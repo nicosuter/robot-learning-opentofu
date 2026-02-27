@@ -17,7 +17,7 @@ tofu -chdir=modules/aws/bootstrap init
 tofu -chdir=modules/aws/bootstrap apply \
   -var="state_bucket_name=<your-state-bucket>" \
   -var="lock_table_name=tofu-state-lock" \
-  -var="region=eu-central-1"
+  -var="region="us-east-1"
 ```
 
 Then fill in `backend.tf` with the bucket and table names you just created.

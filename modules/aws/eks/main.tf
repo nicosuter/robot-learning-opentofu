@@ -456,8 +456,9 @@ resource "aws_cloudwatch_event_target" "karpenter_instance_state" {
 }
 
 # Tag private subnets + cluster SG for Karpenter node discovery
+# Use index-based keys so for_each is known at plan time (subnet IDs are apply-time only)
 resource "aws_ec2_tag" "karpenter_subnet" {
-  for_each    = toset(var.private_subnet_ids)
+  for_each    = { for i, id in var.private_subnet_ids : tostring(i) => id }
   resource_id = each.value
   key         = "karpenter.sh/discovery"
   value       = var.cluster_name

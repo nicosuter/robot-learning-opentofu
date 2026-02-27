@@ -5,7 +5,7 @@
 #   tofu -chdir=modules/aws/bootstrap init
 #   tofu -chdir=modules/aws/bootstrap apply \
 #     -var="state_bucket_name=<bucket>" \
-#     -var="region=eu-central-1"
+#     -var="region="us-east-1"
 #
 # Then fill in backend.tf and run `tofu init` from the root.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -22,6 +22,7 @@ terraform {
 }
 
 provider "aws" {
+  profile = "ethrc"
   region = var.region
 }
 

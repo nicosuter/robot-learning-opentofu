@@ -291,7 +291,7 @@ resource "kubectl_manifest" "nodepool_cpu" {
           requirements = [
             { key = "karpenter.sh/capacity-type", operator = "In", values = ["on-demand", "spot"] },
             { key = "karpenter.k8s.aws/instance-family", operator = "In", values = ["m5", "m6i", "t3"] },
-            { key = "karpenter.k8s.aws/instance-cpu", operator = "In", values = ["2", "4", "8"] },
+            { key = "karpenter.k8s.aws/instance-cpu", operator = "In", values = ["2", "4"] },
             { key = "kubernetes.io/arch", operator = "In", values = ["amd64"] },
           ]
         }

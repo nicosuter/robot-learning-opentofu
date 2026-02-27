@@ -119,7 +119,7 @@ resource "aws_eks_node_group" "system" {
   node_group_name = "${var.cluster_name}-system"
   node_role_arn   = aws_iam_role.eks_nodes.arn
   subnet_ids      = var.private_subnet_ids
-  instance_types  = ["t3.small"]
+  instance_types  = ["t3.xlarge"]
   disk_size       = var.system_node_disk_size
 
   scaling_config {

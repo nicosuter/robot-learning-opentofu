@@ -140,3 +140,9 @@ variable "workload_namespaces" {
   type        = list(string)
   default     = ["robot-learning", "humanoid", "aeronautics", "cybersecurity"]
 }
+
+variable "kubeflow_training_operator_enabled" {
+  description = "Install the Kubeflow Training Operator for distributed PyTorchJob workloads."
+  type        = bool
+  default     = true
+}

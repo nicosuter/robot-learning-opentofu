@@ -1,8 +1,9 @@
 locals {
-  install_gpu_operator = contains(["gpum", "gpul"], var.node_tier)
-  install_s3_csi       = length(var.s3_bucket_arns) > 0
-  install_argocd       = var.argocd_enabled
-  oidc_issuer          = regex("oidc-provider/(.+)$", var.oidc_provider_arn)[0]
+  install_gpu_operator      = contains(["gpum", "gpul"], var.node_tier)
+  install_s3_csi            = length(var.s3_bucket_arns) > 0
+  install_argocd            = var.argocd_enabled
+  install_training_operator = var.kubeflow_training_operator_enabled
+  oidc_issuer               = regex("oidc-provider/(.+)$", var.oidc_provider_arn)[0]
 }
 
 # ──────────────────────────────────────────────
@@ -178,6 +179,35 @@ resource "helm_release" "nvidia_gpu_operator" {
 
   values = [yamlencode({
     driver = { enabled = false }
+  })]
+
+  depends_on = [
+    aws_eks_addon.coredns,
+    helm_release.karpenter,
+  ]
+}
+
+# ──────────────────────────────────────────────
+# Kubeflow Training Operator
+# Manages PyTorchJob, TFJob, MPIJob CRDs for distributed training.
+# ──────────────────────────────────────────────
+
+resource "helm_release" "training_operator" {
+  count = local.install_training_operator ? 1 : 0
+
+  name              = "training-operator"
+  repository        = "https://kubeflow.github.io/training-operator"
+  chart             = "training-operator"
+  version           = "1.8.1"
+  namespace         = "kubeflow"
+  create_namespace  = true
+
+  values = [yamlencode({
+    nodeSelector = { "node-role" = "system" }
+    resources = {
+      requests = { cpu = "100m", memory = "128Mi" }
+      limits = { cpu = "500m", memory = "512Mi" }
+    }
   })]
 
   depends_on = [

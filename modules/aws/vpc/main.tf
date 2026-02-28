@@ -58,6 +58,8 @@ resource "aws_subnet" "public" {
   cidr_block              = var.public_subnet_cidrs[count.index]
   availability_zone       = var.availability_zones[count.index]
   map_public_ip_on_launch = true
+  # DNS64 for IPv6-primary
+  enable_dns64 = true
   # Automatically assign IPv6 addresses (primary)
   assign_ipv6_address_on_creation = true
   ipv6_cidr_block                 = cidrsubnet(local.vpc_ipv6_cidr_block, 8, count.index + 100)
@@ -72,6 +74,10 @@ resource "aws_subnet" "public" {
       "kubernetes.io/role/elb"                    = "1"
     }
   )
+
+  lifecycle {
+    create_before_destroy = false
+  }
 }
 
 # Private Subnets (IPv6 primary, IPv4 dual-stack)
@@ -80,6 +86,8 @@ resource "aws_subnet" "private" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_subnet_cidrs[count.index]
   availability_zone = var.availability_zones[count.index]
+  # DNS64 for IPv6-primary
+  enable_dns64 = true
   # Automatically assign IPv6 addresses (primary)
   assign_ipv6_address_on_creation = true
   ipv6_cidr_block                 = cidrsubnet(local.vpc_ipv6_cidr_block, 8, count.index)
@@ -92,8 +100,13 @@ resource "aws_subnet" "private" {
       Name                                        = "${var.cluster_name}-private-subnet-${count.index + 1}"
       "kubernetes.io/cluster/${var.cluster_name}" = "shared"
       "kubernetes.io/role/internal-elb"           = "1"
+      "karpenter.sh/discovery"                    = var.cluster_name
     }
   )
+
+  lifecycle {
+    create_before_destroy = false
+  }
 }
 
 # Single NAT Gateway — IPv4 fallback only; bulk traffic uses VPC endpoints
@@ -164,6 +177,14 @@ resource "aws_route_table" "private" {
   route {
     ipv6_cidr_block        = "::/0"
     egress_only_gateway_id = aws_egress_only_internet_gateway.main.id
+  }
+
+  # NAT64 — DNS64 synthesizes AAAA records in 64:ff9b::/96 for IPv4-only
+  # destinations; this route sends that traffic through the NAT Gateway which
+  # performs the IPv6→IPv4 translation.
+  route {
+    ipv6_cidr_block = "64:ff9b::/96"
+    nat_gateway_id  = aws_nat_gateway.main.id
   }
 
   # IPv4 default route (fallback) - via NAT Gateway
@@ -256,6 +277,7 @@ resource "aws_security_group" "eks_nodes" {
     {
       Name                                        = "${var.cluster_name}-nodes-sg"
       "kubernetes.io/cluster/${var.cluster_name}" = "owned"
+      "karpenter.sh/discovery"                    = var.cluster_name
     }
   )
 }
@@ -354,11 +376,11 @@ resource "aws_vpc_endpoint" "s3" {
 
 locals {
   interface_endpoints = {
-    "ecr.api" = "com.amazonaws.${var.region}.ecr.api"
-    "ecr.dkr" = "com.amazonaws.${var.region}.ecr.dkr"
-    "sts"     = "com.amazonaws.${var.region}.sts"
-    "ec2"     = "com.amazonaws.${var.region}.ec2"
-    "sqs"     = "com.amazonaws.${var.region}.sqs"
+    "ecr.api" = { service = "com.amazonaws.${var.region}.ecr.api", ip_type = "dualstack" }
+    "ecr.dkr" = { service = "com.amazonaws.${var.region}.ecr.dkr", ip_type = "dualstack" }
+    "sts"     = { service = "com.amazonaws.${var.region}.sts",     ip_type = "dualstack" }
+    "ec2"     = { service = "com.amazonaws.${var.region}.ec2",     ip_type = "ipv4" }
+    "sqs"     = { service = "com.amazonaws.${var.region}.sqs",     ip_type = "dualstack" }
   }
 }
 
@@ -366,15 +388,15 @@ resource "aws_vpc_endpoint" "interface" {
   for_each = local.interface_endpoints
 
   vpc_id              = aws_vpc.main.id
-  service_name        = each.value
+  service_name        = each.value.service
   vpc_endpoint_type   = "Interface"
   subnet_ids          = aws_subnet.private[*].id
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
-  ip_address_type     = "ipv4"
+  ip_address_type     = each.value.ip_type
 
   dns_options {
-    dns_record_ip_type = "ipv4"
+    dns_record_ip_type = each.value.ip_type
   }
 
   tags = merge(var.tags, { Name = "${var.cluster_name}-vpce-${each.key}" })

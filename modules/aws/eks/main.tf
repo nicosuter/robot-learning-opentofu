@@ -70,6 +70,32 @@ resource "aws_iam_role_policy_attachment" "eks_container_registry_policy" {
   role       = aws_iam_role.eks_nodes.name
 }
 
+resource "aws_iam_role_policy_attachment" "eks_nodes_cni" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.eks_nodes.name
+}
+
+resource "aws_iam_role_policy" "eks_nodes_ipv6" {
+  name = "${var.cluster_name}-nodes-ipv6"
+  role = aws_iam_role.eks_nodes.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:AssignIpv6Addresses",
+          "ec2:UnassignIpv6Addresses",
+          "ec2:AssignIpv6Prefixes",
+          "ec2:UnassignIpv6Prefixes",
+        ]
+        Resource = "*"
+      },
+    ]
+  })
+}
+
 # EKS Cluster
 resource "aws_eks_cluster" "main" {
   name     = var.cluster_name
@@ -145,6 +171,8 @@ resource "aws_eks_node_group" "system" {
   depends_on = [
     aws_iam_role_policy_attachment.eks_worker_node_policy,
     aws_iam_role_policy_attachment.eks_container_registry_policy,
+    aws_iam_role_policy_attachment.eks_nodes_cni,
+    aws_iam_role_policy.eks_nodes_ipv6,
     aws_eks_addon.vpc_cni,
   ]
 
@@ -184,17 +212,61 @@ resource "aws_iam_role_policy_attachment" "vpc_cni" {
   role       = aws_iam_role.vpc_cni.name
 }
 
+resource "aws_iam_role_policy" "vpc_cni_ipv6" {
+  name = "${var.cluster_name}-vpc-cni-ipv6"
+  role = aws_iam_role.vpc_cni.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:AssignIpv6Addresses",
+          "ec2:UnassignIpv6Addresses",
+          "ec2:AssignIpv6Prefixes",
+          "ec2:UnassignIpv6Prefixes",
+        ]
+        Resource = "*"
+      },
+    ]
+  })
+}
+
 resource "aws_eks_addon" "vpc_cni" {
   cluster_name = aws_eks_cluster.main.name
   addon_name   = "vpc-cni"
 
+  resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
-  service_account_role_arn = aws_iam_role.vpc_cni.arn
+  service_account_role_arn    = aws_iam_role.vpc_cni.arn
   configuration_values = jsonencode({
-    env = {
-      ENABLE_PREFIX_DELEGATION = "true"
-    }
     enableNetworkPolicy = "true"
+  })
+
+  tags = var.tags
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Cluster access IAM policy — grants the AWS-side permissions required to
+# run `aws eks update-kubeconfig` and call the Kubernetes API.
+# Attach this policy to any IAM user/role that needs kubectl access.
+# Kubernetes RBAC is handled separately via the access entries below.
+# ─────────────────────────────────────────────────────────────────────────────
+resource "aws_iam_policy" "cluster_access" {
+  name        = "${var.cluster_name}-cluster-access"
+  description = "Allows aws eks update-kubeconfig and signed API calls to ${var.cluster_name}"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "DescribeCluster"
+        Effect = "Allow"
+        Action = ["eks:DescribeCluster"]
+        Resource = "arn:aws:eks:*:*:cluster/${var.cluster_name}"
+      },
+    ]
   })
 
   tags = var.tags

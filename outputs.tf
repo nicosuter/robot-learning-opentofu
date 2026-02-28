@@ -87,6 +87,11 @@ output "node_iam_role_arn" {
   description = "IAM role ARN of the EKS node group"
   value       = module.eks.node_iam_role_arn
 }
+
+output "cluster_access_policy_arn" {
+  description = "Attach this IAM policy to any user or role that needs kubectl access (grants eks:DescribeCluster). Then add the principal to cluster_access for Kubernetes RBAC."
+  value       = module.eks.cluster_access_policy_arn
+}
 # S3 Outputs
 output "ml_data_bucket_name" {
   description = "Name of the ML data S3 bucket."

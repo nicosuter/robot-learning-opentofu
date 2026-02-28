@@ -30,7 +30,7 @@ resource "aws_wafv2_ip_set" "as214770_v6" {
 
 resource "aws_wafv2_web_acl" "main" {
   name        = "${var.name_prefix}-acl"
-  description = "Allow CH geo + AS214770; block everything else"
+  description = "Allow CH geo and AS214770, block everything else"
   scope       = "REGIONAL"
 
   default_action {
@@ -48,7 +48,7 @@ resource "aws_wafv2_web_acl" "main" {
 
     statement {
       geo_match_statement {
-        country_codes = ["CH"]
+        country_codes = ["CH", "DE"]
       }
     }
 

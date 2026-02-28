@@ -59,6 +59,12 @@ variable "tags" {
   default     = {}
 }
 
+variable "api_server_allowed_cidrs" {
+  description = "IPv4 CIDRs allowed to reach the public EKS API endpoint. Defaults to unrestricted (0.0.0.0/0) when empty. Note: AWS does not support IPv6 CIDRs here — use the WAF Web ACL for IPv6 restriction on application endpoints."
+  type        = list(string)
+  default     = []
+}
+
 variable "cluster_access" {
   description = "Map of IAM principals to grant cluster access. Keys are friendly names; values specify the principal ARN and EKS access policy."
   type = map(object({

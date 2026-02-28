@@ -112,6 +112,9 @@ resource "aws_eks_cluster" "main" {
     security_group_ids      = [var.cluster_security_group_id]
     endpoint_private_access = true
     endpoint_public_access  = true
+    # Restrict public API server access by CIDR. Defaults to 0.0.0.0/0 when
+    # empty; set api_server_allowed_cidrs in the root module to lock this down.
+    public_access_cidrs = length(var.api_server_allowed_cidrs) > 0 ? var.api_server_allowed_cidrs : ["0.0.0.0/0"]
   }
 
   kubernetes_network_config {

@@ -114,6 +114,18 @@ module "eks" {
   node_disk_size = var.node_disk_size
   cluster_access = var.cluster_access
 
+  api_server_allowed_cidrs = var.api_server_allowed_cidrs
+
+  tags = var.tags
+}
+
+# WAF Module — REGIONAL Web ACL (CH geo + AS214770); attach to ALBs
+module "waf" {
+  source = "./modules/aws/waf"
+
+  name_prefix    = var.cluster_name
+  as214770_cidrs = var.waf_as214770_cidrs
+
   tags = var.tags
 }
 
@@ -132,9 +144,13 @@ module "eks_addons" {
   gpu_node_max_lifetime             = var.gpu_node_max_lifetime
 
   # ArgoCD
-  argocd_enabled       = var.argocd_enabled
-  argocd_chart_version = var.argocd_chart_version
-  argocd_source_repos  = var.argocd_source_repos
+  argocd_enabled         = var.argocd_enabled
+  argocd_chart_version   = var.argocd_chart_version
+  argocd_source_repos    = var.argocd_source_repos
+  argocd_hostname        = var.argocd_hostname
+  argocd_certificate_arn = var.argocd_certificate_arn
+
+  waf_web_acl_arn = module.waf.web_acl_arn
 
   workload_namespaces = var.workload_namespaces
 

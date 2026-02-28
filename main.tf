@@ -154,6 +154,9 @@ module "eks_addons" {
 
   workload_namespaces = var.workload_namespaces
 
+  # Kubeflow Training Operator
+  kubeflow_training_operator_enabled = var.kubeflow_training_operator_enabled
+
   tags = var.tags
 
   depends_on = [module.eks]

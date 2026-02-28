@@ -98,3 +98,9 @@ variable "argocd_certificate_arn" {
   type        = string
   default     = null
 }
+
+variable "kubeflow_training_operator_enabled" {
+  description = "Install the Kubeflow Training Operator for distributed PyTorchJob/TFJob workloads."
+  type        = bool
+  default     = true
+}

@@ -78,7 +78,7 @@ resource "aws_eks_cluster" "main" {
 
   access_config {
     authentication_mode                         = "API"
-    bootstrap_cluster_creator_admin_permissions = false
+    bootstrap_cluster_creator_admin_permissions = true
   }
 
   vpc_config {
@@ -103,7 +103,7 @@ resource "aws_eks_cluster" "main" {
   )
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 
   depends_on = [
@@ -145,11 +145,52 @@ resource "aws_eks_node_group" "system" {
   depends_on = [
     aws_iam_role_policy_attachment.eks_worker_node_policy,
     aws_iam_role_policy_attachment.eks_container_registry_policy,
+    aws_eks_addon.vpc_cni,
   ]
 
   lifecycle {
     create_before_destroy = true
   }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VPC CNI Addon — IPv6 / prefix-delegation mode (IRSA)
+# Must be initialized BEFORE nodes join to avoid "cni not initialized" errors.
+# ─────────────────────────────────────────────────────────────────────────────
+
+resource "aws_iam_role" "vpc_cni" {
+  name = "${var.cluster_name}-vpc-cni"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = aws_iam_openid_connect_provider.eks.arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${local.oidc_provider_id}:aud" = "sts.amazonaws.com"
+          "${local.oidc_provider_id}:sub" = "system:serviceaccount:kube-system:aws-node"
+        }
+      }
+    }]
+  })
+
+  tags = var.tags
+}
+
+resource "aws_iam_role_policy_attachment" "vpc_cni" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.vpc_cni.name
+}
+
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name = aws_eks_cluster.main.name
+  addon_name   = "vpc-cni"
+
+  service_account_role_arn = aws_iam_role.vpc_cni.arn
+
+  tags = var.tags
 }
 
 # EKS Access Entries — per-user/role IAM RBAC (no shared kubeconfig)

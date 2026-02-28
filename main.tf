@@ -27,7 +27,6 @@ terraform {
 
 # Configure the AWS Provider
 provider "aws" {
-  profile = "ethrc"
   region = var.region
 }
 

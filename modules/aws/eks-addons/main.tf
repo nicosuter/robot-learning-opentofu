@@ -25,59 +25,12 @@ resource "kubernetes_namespace" "workload" {
 # AWS-managed EKS add-ons
 # ──────────────────────────────────────────────
 
-# VPC CNI — IPv6 / prefix-delegation mode (IRSA)
-resource "aws_iam_role" "vpc_cni" {
-  name = "${var.cluster_name}-vpc-cni"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Federated = var.oidc_provider_arn }
-      Action    = "sts:AssumeRoleWithWebIdentity"
-      Condition = {
-        StringEquals = {
-          "${local.oidc_issuer}:aud" = "sts.amazonaws.com"
-          "${local.oidc_issuer}:sub" = "system:serviceaccount:kube-system:aws-node"
-        }
-      }
-    }]
-  })
-
-  tags = var.tags
-}
-
-resource "aws_iam_role_policy_attachment" "vpc_cni" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-  role       = aws_iam_role.vpc_cni.name
-}
-
-resource "aws_eks_addon" "vpc_cni" {
-  cluster_name = var.cluster_name
-  addon_name   = "vpc-cni"
-
-  service_account_role_arn = aws_iam_role.vpc_cni.arn
-
-  configuration_values = jsonencode({
-    env = {
-      ENABLE_IPv6              = "true"
-      ENABLE_PREFIX_DELEGATION = "true"
-      ENABLE_IPv4              = "false"
-    }
-  })
-
-  tags = var.tags
-}
-
 # CoreDNS — requires nodes to be present
 resource "aws_eks_addon" "coredns" {
   cluster_name = var.cluster_name
   addon_name   = "coredns"
 
   tags = var.tags
-
-  # Implicit dependency: node group must exist before coredns can schedule
-  depends_on = [aws_eks_addon.vpc_cni]
 }
 
 # kube-proxy
@@ -122,8 +75,6 @@ resource "aws_eks_addon" "ebs_csi" {
   service_account_role_arn = aws_iam_role.ebs_csi.arn
 
   tags = var.tags
-
-  depends_on = [aws_eks_addon.vpc_cni]
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -194,7 +145,6 @@ resource "aws_eks_addon" "s3_csi" {
   service_account_role_arn = aws_iam_role.s3_csi[0].arn
 
   tags       = var.tags
-  depends_on = [aws_eks_addon.vpc_cni]
 }
 
 # ──────────────────────────────────────────────

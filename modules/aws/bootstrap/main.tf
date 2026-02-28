@@ -22,7 +22,6 @@ terraform {
 }
 
 provider "aws" {
-  profile = "ethrc"
   region = var.region
 }
 

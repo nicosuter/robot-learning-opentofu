@@ -137,6 +137,7 @@ module "eks_addons" {
   argocd_source_repos  = var.argocd_source_repos
 
   workload_namespaces = var.workload_namespaces
+  argocd_team_groups  = var.argocd_team_groups
 
   tags = var.tags
 

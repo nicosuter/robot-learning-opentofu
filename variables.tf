@@ -92,10 +92,11 @@ variable "tags" {
 }
 
 variable "cluster_access" {
-  description = "Map of IAM principals to grant cluster access. Keys are friendly names."
+  description = "Map of IAM principals to grant cluster access. Keys are friendly names; values specify the principal ARN, EKS access policy, and an optional list of namespaces. When namespaces is non-empty the access entry is scoped to those namespaces only; omit (or leave empty) for cluster-wide access."
   type = map(object({
     principal_arn = string
-    policy        = string # AmazonEKSClusterAdminPolicy | AmazonEKSAdminPolicy | AmazonEKSEditPolicy | AmazonEKSViewPolicy
+    policy        = string                     # AmazonEKSClusterAdminPolicy | AmazonEKSAdminPolicy | AmazonEKSEditPolicy | AmazonEKSViewPolicy
+    namespaces    = optional(list(string), []) # [] = cluster-wide; non-empty = namespace-scoped
   }))
   default = {}
 }
@@ -136,7 +137,13 @@ variable "argocd_source_repos" {
 }
 
 variable "workload_namespaces" {
-  description = "Namespaces to create and allow ArgoCD ml-workloads to deploy into."
+  description = "Namespaces to create. One ArgoCD AppProject is created per namespace and each project is restricted to its own namespace as the only destination."
   type        = list(string)
   default     = ["robot-learning", "humanoid", "aeronautics", "cybersecurity"]
+}
+
+variable "argocd_team_groups" {
+  description = "Map of workload namespace names to lists of SSO/OIDC group names. Members of these groups receive edit access to the corresponding team's ArgoCD AppProject and namespace only. Leave empty to configure SSO group bindings outside of Terraform."
+  type        = map(list(string))
+  default     = {}
 }

@@ -450,35 +450,6 @@ resource "helm_release" "nvidia_gpu_operator" {
   ]
 }
 
-# ──────────────────────────────────────────────
-# Kubeflow Training Operator
-# Manages PyTorchJob, TFJob, MPIJob CRDs for distributed training.
-# ──────────────────────────────────────────────
-
-resource "helm_release" "training_operator" {
-  count = local.install_training_operator ? 1 : 0
-
-  name              = "training-operator"
-  repository        = "https://kubeflow.github.io/training-operator"
-  chart             = "training-operator"
-  version           = "1.8.1"
-  namespace         = "kubeflow"
-  create_namespace  = true
-
-  values = [yamlencode({
-    nodeSelector = { "node-role" = "system" }
-    resources = {
-      requests = { cpu = "100m", memory = "128Mi" }
-      limits = { cpu = "500m", memory = "512Mi" }
-    }
-  })]
-
-  depends_on = [
-    aws_eks_addon.coredns,
-    helm_release.karpenter,
-  ]
-}
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Karpenter
 # ─────────────────────────────────────────────────────────────────────────────

@@ -56,7 +56,7 @@ module "eks" {
 
 | Add-on | Config |
 |--------|--------|
-| `vpc-cni` | `ENABLE_IPv6=true`, `ENABLE_IPv4=false`, `ENABLE_PREFIX_DELEGATION=true` |
+| `vpc-cni` | `ENABLE_PREFIX_DELEGATION=true`, `enableNetworkPolicy=true` |
 | `coredns` | Default |
 | `kube-proxy` | Default |
 | `aws-ebs-csi-driver` | Default |

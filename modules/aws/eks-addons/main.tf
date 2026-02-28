@@ -30,6 +30,9 @@ resource "aws_eks_addon" "coredns" {
   cluster_name = var.cluster_name
   addon_name   = "coredns"
 
+  resolve_conflicts_on_update = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
+
   tags = var.tags
 }
 
@@ -37,6 +40,9 @@ resource "aws_eks_addon" "coredns" {
 resource "aws_eks_addon" "kube_proxy" {
   cluster_name = var.cluster_name
   addon_name   = "kube-proxy"
+
+  resolve_conflicts_on_update = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
 
   tags = var.tags
 }
@@ -73,6 +79,9 @@ resource "aws_eks_addon" "ebs_csi" {
   addon_name   = "aws-ebs-csi-driver"
 
   service_account_role_arn = aws_iam_role.ebs_csi.arn
+
+  resolve_conflicts_on_update = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
 
   tags = var.tags
 }
@@ -143,6 +152,9 @@ resource "aws_eks_addon" "s3_csi" {
   addon_name   = "aws-mountpoint-s3-csi-driver"
 
   service_account_role_arn = aws_iam_role.s3_csi[0].arn
+
+  resolve_conflicts_on_update = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
 
   tags       = var.tags
 }
@@ -236,6 +248,7 @@ resource "kubectl_manifest" "karpenter_node_class" {
           encrypted           = true
           deleteOnTermination = true
         }
+        rootVolume = true
       }]
     }
   })

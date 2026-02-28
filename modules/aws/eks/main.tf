@@ -188,7 +188,14 @@ resource "aws_eks_addon" "vpc_cni" {
   cluster_name = aws_eks_cluster.main.name
   addon_name   = "vpc-cni"
 
+  resolve_conflicts_on_update = "OVERWRITE"
   service_account_role_arn = aws_iam_role.vpc_cni.arn
+  configuration_values = jsonencode({
+    env = {
+      ENABLE_PREFIX_DELEGATION = "true"
+    }
+    enableNetworkPolicy = "true"
+  })
 
   tags = var.tags
 }
@@ -332,7 +339,7 @@ resource "aws_iam_role_policy" "karpenter" {
         Condition = {
           StringEquals              = { "aws:ResourceTag/kubernetes.io/cluster/${var.cluster_name}" = "owned" }
           StringLike                = { "aws:ResourceTag/karpenter.sh/nodepool" = "*" }
-          ForAllValues_StringEquals = { "aws:TagKeys" = ["karpenter.sh/nodeclaim", "Name"] }
+          "ForAllValues:StringEquals" = { "aws:TagKeys" = ["karpenter.sh/nodeclaim", "Name"] }
         }
       },
       {
@@ -363,7 +370,7 @@ resource "aws_iam_role_policy" "karpenter" {
           "ec2:DescribeSpotPriceHistory",
           "ec2:DescribeSubnets",
         ]
-        Condition = { StringEquals = { "aws:RequestedRegion" = data.aws_region.current.name } }
+        Condition = { StringEquals = { "aws:RequestedRegion" = data.aws_region.current.id } }
       },
       {
         Sid      = "AllowSSMReadActions"

@@ -147,3 +147,34 @@ variable "argocd_team_groups" {
   type        = map(list(string))
   default     = {}
 }
+# ── Access restriction ─────────────────────────────────────────────────────────
+
+variable "api_server_allowed_cidrs" {
+  description = "IPv4 CIDRs permitted to reach the public EKS API server (kubectl). Defaults to unrestricted when empty. AWS does not accept IPv6 here — use waf_as214770_cidrs for IPv6 coverage on application endpoints."
+  type        = list(string)
+  default     = []
+}
+
+variable "waf_as214770_cidrs" {
+  description = "IP prefixes (IPv4 and/or IPv6) announced by AS214770. These are allowed through the WAF alongside the Switzerland geo-match rule. Fetch current prefixes from https://bgp.he.net/AS214770."
+  type        = list(string)
+  default     = []
+}
+
+variable "argocd_hostname" {
+  description = "Public hostname for the ArgoCD UI (e.g. argocd.example.com). Set alongside argocd_certificate_arn to create an internet-facing ALB with WAF."
+  type        = string
+  default     = null
+}
+
+variable "argocd_certificate_arn" {
+  description = "ACM certificate ARN for the ArgoCD HTTPS listener. Must cover argocd_hostname. Create via AWS Certificate Manager before applying."
+  type        = string
+  default     = null
+}
+
+variable "kubeflow_training_operator_enabled" {
+  description = "Install the Kubeflow Training Operator for distributed PyTorchJob workloads."
+  type        = bool
+  default     = true
+}

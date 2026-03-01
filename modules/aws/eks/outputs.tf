@@ -68,3 +68,8 @@ output "karpenter_interruption_queue_name" {
   description = "SQS queue name for Karpenter interruption handling."
   value       = aws_sqs_queue.karpenter_interruption.name
 }
+
+output "cluster_access_policy_arn" {
+  description = "ARN of the IAM policy that grants eks:DescribeCluster. Attach to any IAM user or role that needs to run aws eks update-kubeconfig."
+  value       = aws_iam_policy.cluster_access.arn
+}

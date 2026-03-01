@@ -87,6 +87,21 @@ output "node_iam_role_arn" {
   description = "IAM role ARN of the EKS node group"
   value       = module.eks.node_iam_role_arn
 }
+
+output "cluster_access_policy_arn" {
+  description = "Attach this IAM policy to any user or role that needs kubectl access (grants eks:DescribeCluster). Then add the principal to cluster_access for Kubernetes RBAC."
+  value       = module.eks.cluster_access_policy_arn
+}
+
+output "waf_web_acl_arn" {
+  description = "WAF Web ACL ARN (CH geo + AS214770, REGIONAL). Associate with ALBs via aws_wafv2_web_acl_association. Cannot attach directly to the EKS API endpoint — use api_server_allowed_cidrs for that."
+  value       = module.waf.web_acl_arn
+}
+
+output "argocd_url" {
+  description = "ArgoCD UI URL. null when argocd_hostname is not set."
+  value       = var.argocd_hostname != null ? "https://${var.argocd_hostname}" : null
+}
 # S3 Outputs
 output "ml_data_bucket_name" {
   description = "Name of the ML data S3 bucket."

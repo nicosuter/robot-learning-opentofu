@@ -86,3 +86,26 @@ variable "argocd_team_groups" {
   type        = map(list(string))
   default     = {}
 }
+variable "waf_web_acl_arn" {
+  description = "ARN of the WAF Web ACL to associate with the ArgoCD ALB. Required when argocd_hostname is set."
+  type        = string
+  default     = null
+}
+
+variable "argocd_hostname" {
+  description = "Public hostname for ArgoCD (e.g. argocd.example.com). When set alongside argocd_certificate_arn, an internet-facing ALB Ingress is created."
+  type        = string
+  default     = null
+}
+
+variable "argocd_certificate_arn" {
+  description = "ACM certificate ARN for the ArgoCD ALB HTTPS listener. Must cover argocd_hostname."
+  type        = string
+  default     = null
+}
+
+variable "kubeflow_training_operator_enabled" {
+  description = "Install the Kubeflow Training Operator for distributed PyTorchJob/TFJob workloads."
+  type        = bool
+  default     = true
+}

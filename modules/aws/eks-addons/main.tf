@@ -1,8 +1,15 @@
 locals {
-  install_gpu_operator = contains(["gpum", "gpul"], var.node_tier)
-  install_s3_csi       = length(var.s3_bucket_arns) > 0
-  install_argocd       = var.argocd_enabled
-  oidc_issuer          = regex("oidc-provider/(.+)$", var.oidc_provider_arn)[0]
+  install_gpu_operator      = contains(["gpum", "gpul"], var.node_tier)
+  install_s3_csi            = length(var.s3_bucket_arns) > 0
+  install_argocd            = var.argocd_enabled
+  install_training_operator = var.kubeflow_training_operator_enabled
+  oidc_issuer               = regex("oidc-provider/(.+)$", var.oidc_provider_arn)[0]
+
+  expose_argocd = (
+    local.install_argocd &&
+    var.argocd_hostname != null &&
+    var.argocd_certificate_arn != null
+  )
 }
 
 # ──────────────────────────────────────────────
@@ -30,6 +37,9 @@ resource "aws_eks_addon" "coredns" {
   cluster_name = var.cluster_name
   addon_name   = "coredns"
 
+  resolve_conflicts_on_update = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
+
   tags = var.tags
 }
 
@@ -37,6 +47,9 @@ resource "aws_eks_addon" "coredns" {
 resource "aws_eks_addon" "kube_proxy" {
   cluster_name = var.cluster_name
   addon_name   = "kube-proxy"
+
+  resolve_conflicts_on_update = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
 
   tags = var.tags
 }
@@ -73,6 +86,9 @@ resource "aws_eks_addon" "ebs_csi" {
   addon_name   = "aws-ebs-csi-driver"
 
   service_account_role_arn = aws_iam_role.ebs_csi.arn
+
+  resolve_conflicts_on_update = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
 
   tags = var.tags
 }
@@ -144,7 +160,266 @@ resource "aws_eks_addon" "s3_csi" {
 
   service_account_role_arn = aws_iam_role.s3_csi[0].arn
 
+  resolve_conflicts_on_update = "OVERWRITE"
+  resolve_conflicts_on_create = "OVERWRITE"
+
+  tags       = var.tags
+}
+
+# ──────────────────────────────────────────────
+# Kubeflow Training Operator
+# Manages PyTorchJob, TFJob, MPIJob CRDs for distributed training.
+# ──────────────────────────────────────────────
+
+resource "helm_release" "training_operator" {
+  count = local.install_training_operator ? 1 : 0
+
+  name    = "training-operator"
+  chart   = "oci://ghcr.io/kubeflow/training-operator"
+  version = "v1.8.1"
+  namespace        = "kubeflow"
+  create_namespace = true
+
+  values = [yamlencode({
+    nodeSelector = { "node-role" = "system" }
+    resources = {
+      requests = { cpu = "100m", memory = "128Mi" }
+      limits   = { cpu = "500m", memory = "512Mi" }
+    }
+  })]
+
+  depends_on = [
+    aws_eks_addon.coredns,
+    helm_release.karpenter,
+  ]
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AWS Load Balancer Controller — provisions ALBs from Ingress resources
+# Required to expose services (e.g. ArgoCD) via an ALB with WAF attached.
+# ─────────────────────────────────────────────────────────────────────────────
+
+resource "aws_iam_role" "aws_lbc" {
+  name = "${var.cluster_name}-aws-lbc"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = var.oidc_provider_arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${local.oidc_issuer}:aud" = "sts.amazonaws.com"
+          "${local.oidc_issuer}:sub" = "system:serviceaccount:kube-system:aws-load-balancer-controller"
+        }
+      }
+    }]
+  })
+
   tags = var.tags
+}
+
+resource "aws_iam_role_policy" "aws_lbc" {
+  name = "${var.cluster_name}-aws-lbc"
+  role = aws_iam_role.aws_lbc.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["iam:CreateServiceLinkedRole"]
+        Resource = "*"
+        Condition = {
+          StringEquals = { "iam:AWSServiceName" = "elasticloadbalancing.amazonaws.com" }
+        }
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeAccountAttributes", "ec2:DescribeAddresses",
+          "ec2:DescribeAvailabilityZones", "ec2:DescribeInternetGateways",
+          "ec2:DescribeVpcs", "ec2:DescribeVpcPeeringConnections",
+          "ec2:DescribeSubnets", "ec2:DescribeSecurityGroups",
+          "ec2:DescribeInstances", "ec2:DescribeNetworkInterfaces",
+          "ec2:DescribeTags", "ec2:GetCoipPoolUsage",
+          "ec2:DescribeCoipPools", "ec2:GetSecurityGroupsForVpc",
+          "elasticloadbalancing:DescribeLoadBalancers",
+          "elasticloadbalancing:DescribeLoadBalancerAttributes",
+          "elasticloadbalancing:DescribeListeners",
+          "elasticloadbalancing:DescribeListenerCertificates",
+          "elasticloadbalancing:DescribeSSLPolicies",
+          "elasticloadbalancing:DescribeRules",
+          "elasticloadbalancing:DescribeTargetGroups",
+          "elasticloadbalancing:DescribeTargetGroupAttributes",
+          "elasticloadbalancing:DescribeTargetHealth",
+          "elasticloadbalancing:DescribeTags",
+          "elasticloadbalancing:DescribeTrustStores",
+          "elasticloadbalancing:DescribeListenerAttributes",
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "cognito-idp:DescribeUserPoolClient",
+          "acm:ListCertificates", "acm:DescribeCertificate",
+          "iam:ListServerCertificates", "iam:GetServerCertificate",
+          "waf-regional:GetWebACL", "waf-regional:GetWebACLForResource",
+          "waf-regional:AssociateWebACL", "waf-regional:DisassociateWebACL",
+          "wafv2:GetWebACL", "wafv2:GetWebACLForResource",
+          "wafv2:AssociateWebACL", "wafv2:DisassociateWebACL",
+          "shield:GetSubscriptionState", "shield:DescribeProtection",
+          "shield:CreateProtection", "shield:DeleteProtection",
+        ]
+        Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["ec2:AuthorizeSecurityGroupIngress", "ec2:RevokeSecurityGroupIngress"]
+        Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["ec2:CreateSecurityGroup"]
+        Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["ec2:CreateTags"]
+        Resource = "arn:aws:ec2:*:*:security-group/*"
+        Condition = {
+          StringEquals = { "ec2:CreateAction" = "CreateSecurityGroup" }
+          Null         = { "aws:RequestTag/elbv2.k8s.aws/cluster" = "false" }
+        }
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["ec2:CreateTags", "ec2:DeleteTags"]
+        Resource = "arn:aws:ec2:*:*:security-group/*"
+        Condition = {
+          Null = {
+            "aws:RequestTag/elbv2.k8s.aws/cluster"  = "true"
+            "aws:ResourceTag/elbv2.k8s.aws/cluster" = "false"
+          }
+        }
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["ec2:AuthorizeSecurityGroupIngress", "ec2:RevokeSecurityGroupIngress", "ec2:DeleteSecurityGroup"]
+        Resource = "*"
+        Condition = {
+          Null = { "aws:ResourceTag/elbv2.k8s.aws/cluster" = "false" }
+        }
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["elasticloadbalancing:CreateLoadBalancer", "elasticloadbalancing:CreateTargetGroup"]
+        Resource = "*"
+        Condition = {
+          Null = { "aws:RequestTag/elbv2.k8s.aws/cluster" = "false" }
+        }
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:CreateListener", "elasticloadbalancing:DeleteListener",
+          "elasticloadbalancing:CreateRule", "elasticloadbalancing:DeleteRule",
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = ["elasticloadbalancing:AddTags", "elasticloadbalancing:RemoveTags"]
+        Resource = [
+          "arn:aws:elasticloadbalancing:*:*:targetgroup/*/*",
+          "arn:aws:elasticloadbalancing:*:*:loadbalancer/net/*/*",
+          "arn:aws:elasticloadbalancing:*:*:loadbalancer/app/*/*",
+        ]
+        Condition = {
+          Null = {
+            "aws:RequestTag/elbv2.k8s.aws/cluster"  = "true"
+            "aws:ResourceTag/elbv2.k8s.aws/cluster" = "false"
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+        Action = ["elasticloadbalancing:AddTags", "elasticloadbalancing:RemoveTags"]
+        Resource = [
+          "arn:aws:elasticloadbalancing:*:*:listener/net/*/*/*",
+          "arn:aws:elasticloadbalancing:*:*:listener/app/*/*/*",
+          "arn:aws:elasticloadbalancing:*:*:listener-rule/net/*/*/*",
+          "arn:aws:elasticloadbalancing:*:*:listener-rule/app/*/*/*",
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:ModifyLoadBalancerAttributes",
+          "elasticloadbalancing:SetIpAddressType", "elasticloadbalancing:SetSecurityGroups",
+          "elasticloadbalancing:SetSubnets", "elasticloadbalancing:DeleteLoadBalancer",
+          "elasticloadbalancing:ModifyTargetGroup", "elasticloadbalancing:ModifyTargetGroupAttributes",
+          "elasticloadbalancing:DeleteTargetGroup", "elasticloadbalancing:ModifyListenerAttributes",
+        ]
+        Resource = "*"
+        Condition = {
+          Null = { "aws:ResourceTag/elbv2.k8s.aws/cluster" = "false" }
+        }
+      },
+      {
+        Effect = "Allow"
+        Action = ["elasticloadbalancing:AddTags"]
+        Resource = [
+          "arn:aws:elasticloadbalancing:*:*:targetgroup/*/*",
+          "arn:aws:elasticloadbalancing:*:*:loadbalancer/net/*/*",
+          "arn:aws:elasticloadbalancing:*:*:loadbalancer/app/*/*",
+        ]
+        Condition = {
+          StringEquals = { "elasticloadbalancing:CreateAction" = ["CreateTargetGroup", "CreateLoadBalancer"] }
+          Null         = { "aws:RequestTag/elbv2.k8s.aws/cluster" = "false" }
+        }
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["elasticloadbalancing:RegisterTargets", "elasticloadbalancing:DeregisterTargets"]
+        Resource = "arn:aws:elasticloadbalancing:*:*:targetgroup/*/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:SetWebAcl", "elasticloadbalancing:ModifyListener",
+          "elasticloadbalancing:AddListenerCertificates", "elasticloadbalancing:RemoveListenerCertificates",
+          "elasticloadbalancing:ModifyRule",
+        ]
+        Resource = "*"
+      },
+    ]
+  })
+}
+
+resource "helm_release" "aws_lbc" {
+  name             = "aws-load-balancer-controller"
+  repository       = "https://aws.github.io/eks-charts"
+  chart            = "aws-load-balancer-controller"
+  version          = "1.8.1"
+  namespace        = "kube-system"
+
+  values = [yamlencode({
+    clusterName = var.cluster_name
+    serviceAccount = {
+      annotations = {
+        "eks.amazonaws.com/role-arn" = aws_iam_role.aws_lbc.arn
+      }
+    }
+    nodeSelector = { "node-role" = "system" }
+    resources = {
+      requests = { cpu = "50m", memory = "128Mi" }
+    }
+  })]
+
+  depends_on = [aws_eks_addon.coredns]
 }
 
 # ──────────────────────────────────────────────
@@ -236,6 +511,7 @@ resource "kubectl_manifest" "karpenter_node_class" {
           encrypted           = true
           deleteOnTermination = true
         }
+        rootVolume = true
       }]
     }
   })
@@ -358,8 +634,10 @@ resource "helm_release" "argocd" {
     }
 
     server = {
-      # Expose over in-cluster service only; add an Ingress separately if needed.
-      service = { type = "ClusterIP" }
+      # When exposed via ALB, TLS is terminated at the load balancer and the
+      # server runs in HTTP mode. extraArgs is empty when no ingress is configured.
+      extraArgs = local.expose_argocd ? ["--insecure"] : []
+      service   = { type = "ClusterIP" }
 
       resources = {
         requests = { cpu = "100m", memory = "128Mi" }
@@ -495,4 +773,59 @@ resource "kubectl_manifest" "argocd_rbac_cm" {
   })
 
   depends_on = [helm_release.argocd]
+}
+# ─────────────────────────────────────────────────────────────────────────────
+# ArgoCD Ingress — internet-facing ALB with WAF (CH + AS214770) and HTTPS
+# Created only when argocd_hostname and argocd_certificate_arn are provided.
+# The AWS LBC reads the annotations and provisions the ALB + WAF association.
+# ─────────────────────────────────────────────────────────────────────────────
+
+resource "kubectl_manifest" "argocd_ingress" {
+  count = local.expose_argocd ? 1 : 0
+
+  yaml_body = yamlencode({
+    apiVersion = "networking.k8s.io/v1"
+    kind       = "Ingress"
+    metadata = {
+      name      = "argocd-server"
+      namespace = "argocd"
+      annotations = {
+        "kubernetes.io/ingress.class"                        = "alb"
+        "alb.ingress.kubernetes.io/scheme"                   = "internet-facing"
+        "alb.ingress.kubernetes.io/target-type"              = "ip"
+        "alb.ingress.kubernetes.io/ip-address-type"          = "dualstack"
+        "alb.ingress.kubernetes.io/backend-protocol"         = "HTTP"
+        "alb.ingress.kubernetes.io/listen-ports"             = jsonencode([{ HTTPS = 443 }])
+        "alb.ingress.kubernetes.io/ssl-redirect"             = "443"
+        "alb.ingress.kubernetes.io/ssl-policy"               = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+        "alb.ingress.kubernetes.io/certificate-arn"          = var.argocd_certificate_arn
+        "alb.ingress.kubernetes.io/wafv2-acl-arn"            = var.waf_web_acl_arn
+        "alb.ingress.kubernetes.io/healthcheck-path"         = "/healthz"
+        "alb.ingress.kubernetes.io/healthcheck-protocol"     = "HTTP"
+        "alb.ingress.kubernetes.io/success-codes"            = "200"
+      }
+    }
+    spec = {
+      rules = [{
+        host = var.argocd_hostname
+        http = {
+          paths = [{
+            path     = "/"
+            pathType = "Prefix"
+            backend = {
+              service = {
+                name = "argocd-server"
+                port = { number = 80 }
+              }
+            }
+          }]
+        }
+      }]
+    }
+  })
+
+  depends_on = [
+    helm_release.argocd,
+    helm_release.aws_lbc,
+  ]
 }

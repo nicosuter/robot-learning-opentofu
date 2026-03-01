@@ -127,7 +127,7 @@ variable "argocd_enabled" {
 variable "argocd_chart_version" {
   description = "Version of the argo-cd Helm chart to install."
   type        = string
-  default     = "7.8.1"
+  default     = "9.4.5"
 }
 
 variable "argocd_source_repos" {

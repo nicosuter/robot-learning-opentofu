@@ -1,0 +1,5 @@
+# Default owner for the repository
+* @nicosuter
+
+# ArgoCD permissions
+/modules/aws/eks-addons/argocd.tf @ytadjine

@@ -209,9 +209,13 @@ resource "helm_release" "aws_lbc" {
   chart            = "aws-load-balancer-controller"
   version          = "3.1.0"
   namespace        = "kube-system"
+  timeout          = 600
+  wait             = false
 
   values = [yamlencode({
-    clusterName = var.cluster_name
+    clusterName       = var.cluster_name
+    defaultTargetType = "ip"
+    replicaCount      = 1
     serviceAccount = {
       annotations = {
         "eks.amazonaws.com/role-arn" = aws_iam_role.aws_lbc.arn

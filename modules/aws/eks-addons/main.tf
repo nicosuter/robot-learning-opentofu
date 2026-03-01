@@ -622,9 +622,9 @@ resource "helm_release" "argocd" {
 
   # wait=true blocks until all Deployments are Available and CRDs are established,
   # which prevents the AppProject kubectl_manifest below from racing the CRD registration.
-  wait         = true
+  wait          = true
   wait_for_jobs = true
-  timeout      = 600
+  timeout       = 600
 
   values = [yamlencode({
     global = {
@@ -692,45 +692,36 @@ resource "helm_release" "argocd" {
   ]
 }
 
-# ArgoCD AppProject: ml-workloads
-# Scopes ML training jobs, experiment trackers, and model servers to a
-# dedicated project with its own RBAC boundary.
-resource "kubectl_manifest" "argocd_ml_project" {
-  count = local.install_argocd ? 1 : 0
+# ─────────────────────────────────────────────────────────────────────────────
+# ArgoCD AppProjects — one per team namespace.
+# Each project is locked to a single destination namespace so that a team can
+# only deploy into their own namespace via ArgoCD.
+# ClusterRole / ClusterRoleBinding are intentionally excluded from
+# clusterResourceWhitelist to prevent privilege escalation from any trusted repo.
+# ─────────────────────────────────────────────────────────────────────────────
+
+resource "kubectl_manifest" "argocd_team_project" {
+  for_each = local.install_argocd ? toset(var.workload_namespaces) : toset([])
 
   yaml_body = yamlencode({
     apiVersion = "argoproj.io/v1alpha1"
     kind       = "AppProject"
     metadata = {
-      name      = "ml-workloads"
+      name      = each.value
       namespace = "argocd"
     }
     spec = {
-      description = "ML training, experiment tracking, and model serving workloads"
+      description = "Workloads for the ${each.value} team — scoped exclusively to the ${each.value} namespace."
 
-      # Restrict to explicit source repos. Wildcard left as default but callers
-      # should override argocd_source_repos to a specific list in production.
       sourceRepos = var.argocd_source_repos
 
-      destinations = concat(
-        [
-          { server = "https://kubernetes.default.svc", namespace = "ml-workloads" },
-          { server = "https://kubernetes.default.svc", namespace = "kubeflow" },
-        ],
-        [for ns in var.workload_namespaces : { server = "https://kubernetes.default.svc", namespace = ns }]
-      )
-
-      # Cluster-scoped resources the project may manage.
-      # ClusterRole / ClusterRoleBinding are intentionally excluded: granting
-      # GitOps control over RBAC primitives allows privilege escalation from
-      # any repo that the project trusts.
-      clusterResourceWhitelist = [
-        { group = "", kind = "Namespace" },
-        { group = "storage.k8s.io", kind = "StorageClass" },
-        # Karpenter NodePool expansion triggered by ML workload demand
-        { group = "karpenter.sh", kind = "NodePool" },
-        { group = "karpenter.k8s.aws", kind = "EC2NodeClass" },
+      # Only this team's namespace is an allowed destination.
+      destinations = [
+        { server = "https://kubernetes.default.svc", namespace = each.value }
       ]
+
+      # Teams may not manage cluster-scoped resources through ArgoCD.
+      clusterResourceWhitelist = []
 
       namespaceResourceWhitelist = [
         { group = "*", kind = "*" },
@@ -743,6 +734,46 @@ resource "kubectl_manifest" "argocd_ml_project" {
   depends_on = [helm_release.argocd]
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# ArgoCD RBAC — per-team roles.
+# Each team gets a role that can fully manage applications inside their own
+# AppProject/namespace and nothing else. SSO/OIDC group-to-role mappings are
+# supplied via var.argocd_team_groups; leave empty to configure SSO separately.
+# ─────────────────────────────────────────────────────────────────────────────
+
+resource "kubectl_manifest" "argocd_rbac_cm" {
+  count = local.install_argocd ? 1 : 0
+
+  yaml_body = yamlencode({
+    apiVersion = "v1"
+    kind       = "ConfigMap"
+    metadata = {
+      name      = "argocd-rbac-cm"
+      namespace = "argocd"
+    }
+    data = {
+      # Unauthenticated / unmatched users get read-only access cluster-wide.
+      "policy.default" = "role:readonly"
+
+      "policy.csv" = join("\n", flatten([
+        # Per-team roles: full control over apps inside the team's own project only.
+        [for ns in var.workload_namespaces : [
+          "p, role:${ns}-team, applications, *, ${ns}/*, allow",
+          "p, role:${ns}-team, repositories, get, *, allow",
+          "p, role:${ns}-team, logs, get, ${ns}/*, allow",
+          "p, role:${ns}-team, exec, create, ${ns}/*, allow",
+        ]],
+
+        # SSO/OIDC group → team role bindings (populated from argocd_team_groups).
+        [for ns, groups in var.argocd_team_groups : [
+          for group in groups : "g, ${group}, role:${ns}-team"
+        ]],
+      ]))
+    }
+  })
+
+  depends_on = [helm_release.argocd]
+}
 # ─────────────────────────────────────────────────────────────────────────────
 # ArgoCD Ingress — internet-facing ALB with WAF (CH + AS214770) and HTTPS
 # Created only when argocd_hostname and argocd_certificate_arn are provided.

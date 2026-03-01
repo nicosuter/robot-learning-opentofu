@@ -66,10 +66,11 @@ variable "api_server_allowed_cidrs" {
 }
 
 variable "cluster_access" {
-  description = "Map of IAM principals to grant cluster access. Keys are friendly names; values specify the principal ARN and EKS access policy."
+  description = "Map of IAM principals to grant cluster access. Keys are friendly names; values specify the principal ARN, EKS access policy, and an optional list of namespaces. When namespaces is non-empty the access entry is scoped to those namespaces only; omit (or leave empty) for cluster-wide access."
   type = map(object({
     principal_arn = string
-    policy        = string # AmazonEKSClusterAdminPolicy | AmazonEKSAdminPolicy | AmazonEKSEditPolicy | AmazonEKSViewPolicy
+    policy        = string                     # AmazonEKSClusterAdminPolicy | AmazonEKSAdminPolicy | AmazonEKSEditPolicy | AmazonEKSViewPolicy
+    namespaces    = optional(list(string), []) # [] = cluster-wide; non-empty = namespace-scoped
   }))
   default = {}
 

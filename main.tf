@@ -153,6 +153,7 @@ module "eks_addons" {
   waf_web_acl_arn = module.waf.web_acl_arn
 
   workload_namespaces = var.workload_namespaces
+  argocd_team_groups  = var.argocd_team_groups
 
   # Kubeflow Training Operator
   kubeflow_training_operator_enabled = var.kubeflow_training_operator_enabled

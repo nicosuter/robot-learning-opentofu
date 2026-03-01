@@ -19,16 +19,42 @@ node_tier = "cpu"
 # IAM user or role ARNs for per-user kubeconfig access (no shared credentials).
 # Policies: AmazonEKSClusterAdminPolicy | AmazonEKSAdminPolicy
 #           AmazonEKSEditPolicy         | AmazonEKSViewPolicy
+#
+# Add "namespaces" to restrict a principal to specific namespace(s) only.
+# Omit "namespaces" (or leave it as []) for cluster-wide access (admins only).
 
 cluster_access = {
+  # Platform admin — cluster-wide access
   alice = {
     principal_arn = "arn:aws:iam::123456789012:user/alice"
     policy        = "AmazonEKSClusterAdminPolicy"
   }
-  bob = {
-    principal_arn = "arn:aws:iam::123456789012:role/bob-dev-role"
+
+  # Robot-learning team — kubectl access scoped to their namespace only
+  rl-engineer = {
+    principal_arn = "arn:aws:iam::123456789012:role/robot-learning-dev"
     policy        = "AmazonEKSEditPolicy"
+    namespaces    = ["robot-learning"]
   }
+
+  # Humanoid team — kubectl access scoped to their namespace only
+  hum-engineer = {
+    principal_arn = "arn:aws:iam::123456789012:role/humanoid-dev"
+    policy        = "AmazonEKSEditPolicy"
+    namespaces    = ["humanoid"]
+  }
+}
+
+# ---- ArgoCD team access ----------------------------------------------------
+# Maps each workload namespace to one or more SSO/OIDC group names.
+# Members of these groups can deploy via ArgoCD into their namespace only.
+# Leave empty ({}) to manage ArgoCD SSO group bindings outside Terraform.
+
+argocd_team_groups = {
+  robot-learning = ["okta-group-robot-learning", "github-team-robot-learning"]
+  humanoid       = ["okta-group-humanoid"]
+  aeronautics    = ["okta-group-aeronautics"]
+  cybersecurity  = ["okta-group-cybersecurity"]
 }
 
 # ---- IPv6 ------------------------------------------------------------------

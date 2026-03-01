@@ -37,9 +37,9 @@ resource "aws_wafv2_web_acl" "main" {
     block {}
   }
 
-  # Rule 1 — Switzerland geo-match
+  # Rule 1 — Geo-allow
   rule {
-    name     = "allow-ch"
+    name     = "geo-allow"
     priority = 1
 
     action {

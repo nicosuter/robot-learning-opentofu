@@ -3,6 +3,11 @@ variable "cluster_name" {
   type        = string
 }
 
+variable "vpc_id" {
+  description = "ID of the VPC in which the EKS cluster runs. Passed to the AWS Load Balancer Controller."
+  type        = string
+}
+
 variable "oidc_provider_arn" {
   description = "ARN of the EKS OIDC provider (used for IRSA)."
   type        = string
@@ -105,7 +110,25 @@ variable "argocd_certificate_arn" {
 }
 
 variable "kubeflow_training_operator_enabled" {
-  description = "Install the Kubeflow Training Operator for distributed PyTorchJob/TFJob workloads."
+  description = "Install Kubeflow Trainer v2 for distributed ML training with the TrainJob API. Includes JobSet and default ClusterTrainingRuntimes (torch, deepspeed, mlx, jax, torchtune)."
   type        = bool
   default     = true
+}
+
+variable "kubeflow_dashboard_enabled" {
+  description = "Deploy the Kubeflow Central Dashboard in the kubeflow namespace. Requires kubeflow_training_operator_enabled = true. Runs without Istio; WAF on the ALB enforces access control."
+  type        = bool
+  default     = true
+}
+
+variable "kubeflow_dashboard_hostname" {
+  description = "Public hostname for the Kubeflow Dashboard (e.g. kubeflow.example.com). Set alongside kubeflow_dashboard_certificate_arn to create an internet-facing ALB with WAF."
+  type        = string
+  default     = null
+}
+
+variable "kubeflow_dashboard_certificate_arn" {
+  description = "ACM certificate ARN for the Kubeflow Dashboard HTTPS listener. Must cover kubeflow_dashboard_hostname."
+  type        = string
+  default     = null
 }

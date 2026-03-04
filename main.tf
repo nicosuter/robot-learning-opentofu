@@ -134,6 +134,7 @@ module "eks_addons" {
   source = "./modules/aws/eks-addons"
 
   cluster_name                      = module.eks.cluster_name
+  vpc_id                            = module.vpc.vpc_id
   node_tier                         = var.node_tier
   node_disk_size                    = var.node_disk_size
   oidc_provider_arn                 = module.eks.oidc_provider_arn
@@ -155,8 +156,11 @@ module "eks_addons" {
   workload_namespaces = var.workload_namespaces
   argocd_team_groups  = var.argocd_team_groups
 
-  # Kubeflow Training Operator
+  # Kubeflow
   kubeflow_training_operator_enabled = var.kubeflow_training_operator_enabled
+  kubeflow_dashboard_enabled         = var.kubeflow_dashboard_enabled
+  kubeflow_dashboard_hostname        = var.kubeflow_dashboard_hostname
+  kubeflow_dashboard_certificate_arn = var.kubeflow_dashboard_certificate_arn
 
   tags = var.tags
 

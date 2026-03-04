@@ -214,6 +214,7 @@ resource "helm_release" "aws_lbc" {
 
   values = [yamlencode({
     clusterName       = var.cluster_name
+    vpcId             = var.vpc_id
     defaultTargetType = "ip"
     replicaCount      = 1
     serviceAccount = {

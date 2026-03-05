@@ -95,7 +95,35 @@ resource "kubectl_manifest" "nodepool_cpu" {
   depends_on = [kubectl_manifest.karpenter_node_class]
 }
 
-# NodePool: gpum — mid-tier g6e.4xlarge GPU node (1× L40S), on-demand only
+# NodePool: gpus — entry-level g6.xlarge GPU node (1× L4 24GB), on-demand only
+resource "kubectl_manifest" "nodepool_gpus" {
+  yaml_body = yamlencode({
+    apiVersion = "karpenter.sh/v1"
+    kind       = "NodePool"
+    metadata   = { name = "gpus" }
+    spec = {
+      template = {
+        metadata = { labels = { "node-tier" = "gpus" } }
+        spec = {
+          nodeClassRef = { group = "karpenter.k8s.aws", kind = "EC2NodeClass", name = "default" }
+          expireAfter  = var.gpu_node_max_lifetime
+          requirements = [
+            { key = "karpenter.sh/capacity-type", operator = "In", values = ["on-demand"] },
+            { key = "node.kubernetes.io/instance-type", operator = "In", values = ["g6.xlarge"] },
+            { key = "kubernetes.io/arch", operator = "In", values = ["amd64"] },
+          ]
+          taints = [{ key = "nvidia.com/gpu", value = "true", effect = "NoSchedule" }]
+        }
+      }
+      limits     = { "nvidia.com/gpu" = "1" }
+      disruption = { consolidationPolicy = "WhenEmpty", consolidateAfter = "5m" }
+    }
+  })
+
+  depends_on = [kubectl_manifest.karpenter_node_class]
+}
+
+# NodePool: gpum — mid-tier g6e GPU nodes (1× L40S), on-demand only
 resource "kubectl_manifest" "nodepool_gpum" {
   yaml_body = yamlencode({
     apiVersion = "karpenter.sh/v1"

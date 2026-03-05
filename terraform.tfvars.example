@@ -8,13 +8,13 @@ region       = "us-east-1"
 
 # ---- Nodes -----------------------------------------------------------------
 # node_tier controls Karpenter NodePool selection and GPU Operator installation.
-# cpu = CPU only (m5/m6i/t3, spot-eligible), gpum = g6e.4xlarge (default, configurable via gpum_instance_types), gpul = p5.xlarge
+# cpu = CPU only (m5/m6i/t3, spot-eligible), gpus = g6.xlarge (L4), gpum = g6e.xlarge/g6e.2xlarge (L40S, configurable via gpum_instance_types), gpul = p5.xlarge
 node_tier = "cpu"
 
 # List of EC2 instance types for the 'gpum' pool.
-# gpum_instance_types = ["g6e.4xlarge"]
+# gpum_instance_types = ["g6e.xlarge", "g6e.2xlarge"]
 
-# Hard TTL for gpum/gpul nodes. Karpenter drains and terminates any node running
+# Hard TTL for gpus/gpum/gpul nodes. Karpenter drains and terminates any node running
 # longer than this, regardless of what's on it. Default: 24h. Set "Never" to disable.
 # gpu_node_max_lifetime = "24h"
 

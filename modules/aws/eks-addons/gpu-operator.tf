@@ -1,12 +1,12 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# NVIDIA GPU Operator (gpum / gpul tiers only)
+# NVIDIA GPU Operator (gpus / gpum / gpul tiers only)
 # ─────────────────────────────────────────────────────────────────────────────
 # EKS GPU-optimised AMIs ship with NVIDIA drivers pre-installed, so
 # driver.enabled=false tells the operator to skip driver installation and only
 # manage the device plugin, DCGM exporter, and other components.
 
 locals {
-  install_gpu_operator = contains(["gpum", "gpul"], var.node_tier)
+  install_gpu_operator = contains(["gpus", "gpum", "gpul"], var.node_tier)
 }
 
 resource "helm_release" "nvidia_gpu_operator" {

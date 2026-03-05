@@ -47,20 +47,20 @@ variable "public_subnet_cidrs" {
 }
 
 variable "node_tier" {
-  description = "Compute tier for the node group: 'cpu', 'gpum', or 'gpul'. GPU tiers auto-install the NVIDIA GPU Operator."
+  description = "Compute tier for the node group: 'cpu', 'gpus', 'gpum', or 'gpul'. GPU tiers auto-install the NVIDIA GPU Operator."
   type        = string
   default     = "cpu"
 
   validation {
-    condition     = contains(["cpu", "gpum", "gpul"], var.node_tier)
-    error_message = "node_tier must be one of: cpu, gpum, gpul."
+    condition     = contains(["cpu", "gpus", "gpum", "gpul"], var.node_tier)
+    error_message = "node_tier must be one of: cpu, gpus, gpum, gpul."
   }
 }
 
 variable "gpum_instance_types" {
-  description = "List of EC2 instance types to use for the 'gpum' NodePool. Defaults to a single g6e.4xlarge (1x L40S)."
+  description = "List of EC2 instance types to use for the 'gpum' NodePool. Defaults to g6e.xlarge and g6e.2xlarge (1× L40S)."
   type        = list(string)
-  default     = ["g6e.4xlarge"]
+  default     = ["g6e.xlarge", "g6e.2xlarge"]
 }
 
 variable "node_disk_size" {
@@ -120,7 +120,7 @@ variable "s3_bucket_arns" {
 }
 
 variable "gpu_node_max_lifetime" {
-  description = "Hard TTL for gpum/gpul nodes. Karpenter drains and terminates any node running longer than this duration, regardless of workload state. Go duration syntax (e.g. \"24h\", \"72h\"). Set to \"Never\" to disable."
+  description = "Hard TTL for gpus/gpum/gpul nodes. Karpenter drains and terminates any node running longer than this duration, regardless of workload state. Go duration syntax (e.g. \"24h\", \"72h\"). Set to \"Never\" to disable."
   type        = string
   default     = "16h"
 }

@@ -1,0 +1,16 @@
+# Copy to terraform.tfvars and customize
+
+region = "us-east-1"
+aws_profile = "ethrc"
+
+# SSH public keys — Terraform creates the EC2 key pair from the first; all are added to authorized_keys
+public_keys = [
+  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... you@host",
+  # "ssh-ed25519 AAAAC3... another-user@host",  # optional: additional keys
+]
+
+# Minimum: t3.micro (1 vCPU, 1 GiB)
+# instance_type = "t3.micro"
+
+# Restrict SSH to your IP in production, e.g. ["1.2.3.4/32"]
+# ssh_allowed_cidrs = ["0.0.0.0/0"]

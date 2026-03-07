@@ -188,8 +188,7 @@ resource "kubectl_manifest" "argocd_ingress" {
   # Block until AWS LBC has provisioned the ALB and written its hostname back
   # into the ingress status — required so the Route 53 record can be created
   # in the same apply without a second run.
-  wait    = true
-  timeout = 300
+  wait = true
   wait_for {
     field {
       key        = "status.loadBalancer.ingress.[0].hostname"

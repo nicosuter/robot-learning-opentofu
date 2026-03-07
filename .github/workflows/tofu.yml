@@ -81,7 +81,17 @@ jobs:
       - name: Plan
         run: |
           set -o pipefail
-          tofu plan -no-color 2>&1 | tee plan.txt
+          # ANSI output renders natively in the Actions live log
+          tofu plan 2>&1 | tee plan.ansi
+          # Strip colours for the step summary diff block
+          sed 's/\x1b\[[0-9;]*m//g' plan.ansi > plan.txt
+
+      - name: Post plan to step summary
+        if: always()
+        run: |
+          echo '```diff' >> $GITHUB_STEP_SUMMARY
+          cat plan.txt  >> $GITHUB_STEP_SUMMARY
+          echo '```'    >> $GITHUB_STEP_SUMMARY
 
   # ── Apply ──────────────────────────────────────────────────────────────────────
   # Requires manual approval via the "production" environment.

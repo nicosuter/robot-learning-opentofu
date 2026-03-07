@@ -443,7 +443,7 @@ resource "aws_iam_role_policy" "karpenter" {
           "ec2:DescribeSpotPriceHistory",
           "ec2:DescribeSubnets",
         ]
-        Condition = { StringEquals = { "aws:RequestedRegion" = data.aws_region.current.id } }
+        Condition = { StringEquals = { "aws:RequestedRegion" = data.aws_region.current.region } }
       },
       {
         Sid      = "AllowSSMReadActions"

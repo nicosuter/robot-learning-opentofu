@@ -2,7 +2,9 @@
 # EKS Access Entries — per-user/role IAM RBAC (no shared kubeconfig)
 # ─────────────────────────────────────────────────────────────────────────────
 
-data "aws_caller_identity" "current" {}
+data "aws_iam_policy" "local_dev_access" {
+  name = "SignInLocalDevelopmentAccess"
+}
 
 locals {
   # Principals that are scoped to specific namespaces (team members, not admins).
@@ -53,5 +55,30 @@ resource "aws_iam_user_policy_attachment" "local_dev_access" {
   for_each = local.ns_iam_users
 
   user       = regex(":user/(.+)$", each.value.principal_arn)[0]
-  policy_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/SignInLocalDevelopmentAccess"
+  policy_arn = data.aws_iam_policy.local_dev_access.arn
+}
+
+# ── IAM: allow namespace-scoped users to describe the cluster and generate kubeconfigs ──
+
+resource "aws_iam_policy" "cluster_connect" {
+  name        = "${var.cluster_name}-dev-cluster-connect"
+  description = "Allows namespace-scoped developers to describe and connect to the EKS cluster"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["eks:DescribeCluster", "eks:ListClusters"]
+      Resource = "*"
+    }]
+  })
+
+  tags = var.tags
+}
+
+resource "aws_iam_user_policy_attachment" "cluster_connect" {
+  for_each = local.ns_iam_users
+
+  user       = regex(":user/(.+)$", each.value.principal_arn)[0]
+  policy_arn = aws_iam_policy.cluster_connect.arn
 }

@@ -7,6 +7,10 @@
 # nodes up first; phase 2 applies everything else once the API server is ready.
 #
 # Subsequent applies (updates, drift fixes) can use plain `tofu apply`.
+#
+# Usage:
+#   ./deploy.sh                       # uses whatever creds are active
+#   ./deploy.sh -var="aws_profile=ethrc"  # explicit local profile
 
 set -euo pipefail
 
@@ -17,6 +21,7 @@ tofu apply \
   -target=module.eks \
   -target=module.waf \
   -target=module.s3_ml_data \
+  -target=module.ecr \
   "$@"
 
 # Phase 2: everything else — Helm charts, k8s manifests, ArgoCD, Karpenter

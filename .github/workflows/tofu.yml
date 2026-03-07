@@ -5,8 +5,8 @@
 #
 # Required secrets:
 #   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
-#   TF_STATE_BUCKET, TF_STATE_LOCK_TABLE
-#   TF_VARS  — full terraform.tfvars (omit aws_profile; CI uses env-var creds)
+#   TF_STATE_BUCKET, TF_STATE_LOCK_TABLE  (passed as -backend-config; no profile in backend.tf)
+#   TF_VARS  — full terraform.tfvars (aws_profile is stripped automatically)
 
 name: OpenTofu
 

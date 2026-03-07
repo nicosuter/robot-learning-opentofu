@@ -7,18 +7,19 @@
 #     -var="state_bucket_name=<bucket>" \
 #     -var="region=us-east-1"
 #
-# Then initialise the root module:
+# Then initialise the root module (local dev, named profile):
 #
-#   tofu init -reconfigure
+#   tofu init -reconfigure \
+#     -backend-config="bucket=ethrc-tf" \
+#     -backend-config="profile=ethrc"
 #
-# bucket and profile are now inlined in the backend block below.
+# CI passes bucket, dynamodb_table, and omits profile so the S3 backend
+# falls through to the environment-variable credential chain.
 
 terraform {
   backend "s3" {
-    bucket  = "ethrc-tf"
     key     = "hercules/eks/terraform.tfstate"
     region  = "us-east-1"
     encrypt = true
-    profile = "ethrc"
   }
 }

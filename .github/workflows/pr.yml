@@ -1,0 +1,48 @@
+# PR checks — validate only, zero secrets.
+# Saves PR metadata so tofu.yml can post the plan back as a comment.
+
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TF_INPUT: "false"
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: "1.9.0"
+
+      - name: Init (no backend)
+        run: tofu init -backend=false
+
+      - name: Validate
+        run: tofu validate
+
+      # Persist PR number + head SHA so tofu.yml (which has secrets) can
+      # download this artifact and post the plan comment back to the right PR.
+      - name: Save PR metadata
+        env:
+          PR_NUMBER: ${{ github.event.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir pr-meta
+          echo "$PR_NUMBER" > pr-meta/pr-number.txt
+          echo "$HEAD_SHA"  > pr-meta/head-sha.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr-metadata
+          path: pr-meta/

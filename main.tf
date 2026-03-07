@@ -212,6 +212,8 @@ module "s3_ml_scripts" {
 
   bucket_name      = var.ml_scripts_bucket_name
   encrypt_with_kms = false
+  kms_user_arns = [for v in var.cluster_access : v.principal_arn]
+
 
   tags = var.tags
 

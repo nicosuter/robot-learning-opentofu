@@ -102,6 +102,12 @@ variable "argocd_team_groups" {
   type        = map(list(string))
   default     = {}
 }
+variable "hosted_zone_id" {
+  description = "Route53 hosted zone ID used to create CNAME records pointing ArgoCD and Kubeflow hostnames to their ALBs. Leave null to manage DNS externally."
+  type        = string
+  default     = null
+}
+
 variable "waf_web_acl_arn" {
   description = "ARN of the WAF Web ACL to associate with the ArgoCD ALB. Required when argocd_hostname is set."
   type        = string

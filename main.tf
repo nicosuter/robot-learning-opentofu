@@ -154,14 +154,16 @@ module "eks_addons" {
   gpu_node_max_lifetime             = var.gpu_node_max_lifetime
 
   # ArgoCD
-  argocd_enabled         = var.argocd_enabled
-  argocd_chart_version   = var.argocd_chart_version
-  argocd_source_repos    = var.argocd_source_repos
-  argocd_hostname        = var.argocd_hostname
-  argocd_certificate_arn = var.argocd_certificate_arn
+  argocd_enabled       = var.argocd_enabled
+  argocd_chart_version = var.argocd_chart_version
+  argocd_source_repos  = var.argocd_source_repos
+  argocd_hostname      = var.argocd_hostname
+  # Use auto-issued cert when hosted_zone_id is provided; fall back to manually supplied ARN.
+  argocd_certificate_arn = local.create_argocd_cert ? aws_acm_certificate_validation.argocd[0].certificate_arn : var.argocd_certificate_arn
 
   waf_web_acl_arn = module.waf.web_acl_arn
 
+  hosted_zone_id      = local.zone_id
   workload_namespaces = var.workload_namespaces
   argocd_team_groups  = var.argocd_team_groups
 
@@ -169,7 +171,8 @@ module "eks_addons" {
   kubeflow_training_operator_enabled = var.kubeflow_training_operator_enabled
   kubeflow_dashboard_enabled         = var.kubeflow_dashboard_enabled
   kubeflow_dashboard_hostname        = var.kubeflow_dashboard_hostname
-  kubeflow_dashboard_certificate_arn = var.kubeflow_dashboard_certificate_arn
+  # Use auto-issued cert when hosted_zone_id is provided; fall back to manually supplied ARN.
+  kubeflow_dashboard_certificate_arn = local.create_kubeflow_cert ? aws_acm_certificate_validation.kubeflow[0].certificate_arn : var.kubeflow_dashboard_certificate_arn
 
   tags = var.tags
 

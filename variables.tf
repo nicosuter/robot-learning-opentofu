@@ -179,6 +179,12 @@ variable "waf_as214770_cidrs" {
   default     = []
 }
 
+variable "hosted_zone_id" {
+  description = "Route53 hosted zone ID override. Leave null (default) to auto-discover the zone from the hostname's apex domain. Set explicitly only if auto-discovery picks the wrong zone (e.g. subdomain-level zones)."
+  type        = string
+  default     = null
+}
+
 variable "argocd_hostname" {
   description = "Public hostname for the ArgoCD UI (e.g. argocd.example.com). Set alongside argocd_certificate_arn to create an internet-facing ALB with WAF."
   type        = string

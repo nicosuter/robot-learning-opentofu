@@ -22,13 +22,13 @@ resource "kubernetes_cluster_role" "ml_workload_edit" {
 
   # ── Kubeflow Training Operator v2 ──────────────────────────────────────────
   rule {
-    api_groups = ["kubeflow.org"]
+    api_groups = ["trainer.kubeflow.org"]
     resources  = ["trainjobs", "trainjobs/status", "trainingruntimes", "trainingruntimes/status"]
     verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
   }
   # ClusterTrainingRuntimes are cluster-scoped; read-only is sufficient
   rule {
-    api_groups = ["kubeflow.org"]
+    api_groups = ["trainer.kubeflow.org"]
     resources  = ["clustertrainingruntimes"]
     verbs      = ["get", "list", "watch"]
   }

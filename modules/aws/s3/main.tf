@@ -1,14 +1,45 @@
-# KMS key for ML data encryption
+data "aws_caller_identity" "current" {}
+
+# KMS key — only created when encrypt_with_kms = true
 resource "aws_kms_key" "ml_data" {
+  count = var.encrypt_with_kms ? 1 : 0
+
   description             = "KMS key for ML data bucket: ${var.bucket_name}"
   deletion_window_in_days = 30
   enable_key_rotation     = true
   tags                    = merge(var.tags, { Name = "${var.bucket_name}-kms" })
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = concat(
+      [{
+        Sid       = "RootAccountAdmin"
+        Effect    = "Allow"
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        Action    = "kms:*"
+        Resource  = "*"
+      }],
+      length(var.kms_user_arns) > 0 ? [{
+        Sid       = "AllowKeyUsers"
+        Effect    = "Allow"
+        Principal = { AWS = var.kms_user_arns }
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+          "kms:GenerateDataKeyWithoutPlaintext",
+          "kms:DescribeKey",
+        ]
+        Resource = "*"
+      }] : []
+    )
+  })
 }
 
 resource "aws_kms_alias" "ml_data" {
+  count = var.encrypt_with_kms ? 1 : 0
+
   name          = "alias/${var.bucket_name}"
-  target_key_id = aws_kms_key.ml_data.id
+  target_key_id = aws_kms_key.ml_data[0].id
 }
 
 # ML data bucket — single bucket, prefix-separated:
@@ -32,10 +63,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "ml_data" {
   bucket = aws_s3_bucket.ml_data.id
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm     = "aws:kms"
-      kms_master_key_id = aws_kms_key.ml_data.arn
+      sse_algorithm     = var.encrypt_with_kms ? "aws:kms" : "AES256"
+      kms_master_key_id = var.encrypt_with_kms ? aws_kms_key.ml_data[0].arn : null
     }
-    bucket_key_enabled = true
+    bucket_key_enabled = var.encrypt_with_kms
   }
 }
 

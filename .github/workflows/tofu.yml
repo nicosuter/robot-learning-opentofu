@@ -1,12 +1,16 @@
 # OpenTofu CI/CD
 #
 # Pull requests  → validate only (no secrets, no state)
-# Push to master → plan → manual approval → apply
+# Push to master → plan → manual approval → apply (saved plan)
 #
 # Required secrets:
 #   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 #   TF_STATE_BUCKET, TF_STATE_LOCK_TABLE  (passed as -backend-config; no profile in backend.tf)
 #   TF_VARS  — full terraform.tfvars (aws_profile is stripped automatically)
+#
+# Manual approval:
+#   Go to Settings → Environments → production → add yourself as a required reviewer.
+#   The apply job will pause there; click the plan summary link to review before approving.
 
 name: OpenTofu
 
@@ -45,7 +49,8 @@ jobs:
         run: tofu validate
 
   # ── Plan ──────────────────────────────────────────────────────────────────────
-  # Master only. Output is visible in the Actions run — review it before approving apply.
+  # Saves a binary plan file and posts the human-readable diff to the job
+  # summary so reviewers can read it before approving the apply.
   plan:
     name: Plan
     runs-on: ubuntu-latest
@@ -81,11 +86,29 @@ jobs:
       - name: Plan
         run: |
           set -o pipefail
-          tofu plan -no-color 2>&1 | tee plan.txt
+          tofu plan -no-color -out=tfplan 2>&1 | tee plan.txt
+
+      - name: Post plan to job summary
+        if: always()
+        run: |
+          echo '### OpenTofu Plan' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat plan.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: |
+            tfplan
+            .terraform.lock.hcl
+          retention-days: 7
 
   # ── Apply ──────────────────────────────────────────────────────────────────────
-  # Requires manual approval via the "production" environment.
-  # Review the plan output in the preceding job before approving.
+  # Pauses for manual approval (configure required reviewers on the "production"
+  # environment in Settings → Environments). Applies the exact binary plan that
+  # was reviewed — no re-plan, no drift between approval and execution.
   apply:
     name: Apply
     runs-on: ubuntu-latest
@@ -111,7 +134,6 @@ jobs:
           TF_VARS: ${{ secrets.TF_VARS }}
         run: |
           echo "$TF_VARS" > terraform.tfvars
-          # CI authenticates via environment variables, not a named profile.
           sed -i '/^\s*aws_profile/d' terraform.tfvars
 
       - name: Init
@@ -119,5 +141,10 @@ jobs:
           -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
           -backend-config="dynamodb_table=${{ secrets.TF_STATE_LOCK_TABLE }}"
 
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+
       - name: Apply
-        run: tofu apply -auto-approve
+        run: tofu apply -auto-approve tfplan

@@ -159,7 +159,7 @@ module "eks_addons" {
   karpenter_role_arn                = module.eks.karpenter_role_arn
   karpenter_interruption_queue_name = module.eks.karpenter_interruption_queue_name
   node_iam_role_name                = module.eks.node_iam_role_name
-  s3_bucket_arns                    = concat([module.s3_ml_data.bucket_arn], var.s3_bucket_arns)
+  s3_bucket_arns                    = concat([module.s3_ml_data.bucket_arn, module.s3_ml_scripts.bucket_arn], var.s3_bucket_arns)
   gpu_node_max_lifetime             = var.gpu_node_max_lifetime
   ecr_registry_url                  = module.ecr.registry_url
 
@@ -191,6 +191,17 @@ module "s3_ml_data" {
   source = "./modules/aws/s3"
 
   bucket_name = var.ml_data_bucket_name
+
+  tags = var.tags
+
+  depends_on = [module.eks]
+}
+
+# ML Scripts S3 Module
+module "s3_ml_scripts" {
+  source = "./modules/aws/s3"
+
+  bucket_name = var.ml_scripts_bucket_name
 
   tags = var.tags
 

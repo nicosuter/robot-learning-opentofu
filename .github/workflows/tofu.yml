@@ -68,7 +68,10 @@ jobs:
       - name: Write tfvars
         env:
           TF_VARS: ${{ secrets.TF_VARS }}
-        run: echo "$TF_VARS" > terraform.tfvars
+        run: |
+          echo "$TF_VARS" > terraform.tfvars
+          # CI authenticates via environment variables, not a named profile.
+          sed -i '/^\s*aws_profile/d' terraform.tfvars
 
       - name: Init
         run: tofu init
@@ -106,7 +109,10 @@ jobs:
       - name: Write tfvars
         env:
           TF_VARS: ${{ secrets.TF_VARS }}
-        run: echo "$TF_VARS" > terraform.tfvars
+        run: |
+          echo "$TF_VARS" > terraform.tfvars
+          # CI authenticates via environment variables, not a named profile.
+          sed -i '/^\s*aws_profile/d' terraform.tfvars
 
       - name: Init
         run: tofu init

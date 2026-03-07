@@ -159,7 +159,12 @@ module "eks_addons" {
   karpenter_role_arn                = module.eks.karpenter_role_arn
   karpenter_interruption_queue_name = module.eks.karpenter_interruption_queue_name
   node_iam_role_name                = module.eks.node_iam_role_name
-  s3_bucket_arns                    = concat([module.s3_ml_data.bucket_arn, module.s3_ml_scripts.bucket_arn], var.s3_bucket_arns)
+  # S3 ARNs have no account/region component (arn:aws:s3:::<name>), so they
+  # can be constructed from known variables — keeping for_each keys plan-time-known.
+  s3_bucket_arns                    = concat(
+    ["arn:aws:s3:::${var.ml_data_bucket_name}", "arn:aws:s3:::${var.ml_scripts_bucket_name}"],
+    var.s3_bucket_arns,
+  )
   gpu_node_max_lifetime             = var.gpu_node_max_lifetime
   ecr_registry_url                  = module.ecr.registry_url
 

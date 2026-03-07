@@ -7,8 +7,7 @@ locals {
   install_argocd = var.argocd_enabled
   expose_argocd  = (
     local.install_argocd &&
-    var.argocd_hostname != null &&
-    var.argocd_certificate_arn != null
+    var.argocd_hostname != null
   )
 }
 
@@ -179,7 +178,7 @@ resource "kubectl_manifest" "argocd_rbac_cm" {
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ArgoCD Ingress — internet-facing ALB with WAF (CH + AS214770) and HTTPS
-# Created only when argocd_hostname and argocd_certificate_arn are provided.
+# Created only when argocd_hostname is set. Certificate ARN is auto-created at root level.
 # The AWS LBC reads the annotations and provisions the ALB + WAF association.
 # ─────────────────────────────────────────────────────────────────────────────
 

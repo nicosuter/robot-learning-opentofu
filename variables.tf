@@ -111,6 +111,7 @@ variable "tags" {
 
 variable "cluster_access" {
   description = "Map of IAM principals to grant cluster access. Keys are friendly names; values specify the principal ARN, EKS access policy, and an optional list of namespaces. When namespaces is non-empty the access entry is scoped to those namespaces only; omit (or leave empty) for cluster-wide access."
+  sensitive   = true
   type = map(object({
     principal_arn = string
     policy        = string                     # AmazonEKSClusterAdminPolicy | AmazonEKSAdminPolicy | AmazonEKSEditPolicy | AmazonEKSViewPolicy

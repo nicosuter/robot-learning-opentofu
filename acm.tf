@@ -45,3 +45,14 @@ resource "aws_acm_certificate_validation" "argocd" {
   certificate_arn         = aws_acm_certificate.argocd[0].arn
   validation_record_fqdns = [for r in aws_route53_record.argocd_cert_validation : r.fqdn]
 }
+
+# Route 53 record — points the ArgoCD hostname at the ALB created by AWS LBC.
+# The ALB hostname is read back from the ingress status after LBC reconciles.
+resource "aws_route53_record" "argocd" {
+  count   = var.argocd_hostname != null ? 1 : 0
+  zone_id = data.aws_route53_zone.main[0].zone_id
+  name    = var.argocd_hostname
+  type    = "CNAME"
+  ttl     = 60
+  records = [module.eks_addons.argocd_lb_hostname]
+}

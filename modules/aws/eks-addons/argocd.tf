@@ -185,6 +185,19 @@ resource "kubectl_manifest" "argocd_rbac_cm" {
 resource "kubectl_manifest" "argocd_ingress" {
   count = local.expose_argocd ? 1 : 0
 
+  # Block until AWS LBC has provisioned the ALB and written its hostname back
+  # into the ingress status — required so the Route 53 record can be created
+  # in the same apply without a second run.
+  wait    = true
+  timeout = 300
+  wait_for {
+    field {
+      key        = "status.loadBalancer.ingress.[0].hostname"
+      value      = ".+"
+      value_type = "regex"
+    }
+  }
+
   yaml_body = yamlencode({
     apiVersion = "networking.k8s.io/v1"
     kind       = "Ingress"
@@ -230,4 +243,15 @@ resource "kubectl_manifest" "argocd_ingress" {
     helm_release.argocd,
     helm_release.aws_lbc,
   ]
+}
+
+data "kubernetes_ingress_v1" "argocd" {
+  count = local.expose_argocd ? 1 : 0
+
+  metadata {
+    name      = "argocd-server"
+    namespace = "argocd"
+  }
+
+  depends_on = [kubectl_manifest.argocd_ingress]
 }

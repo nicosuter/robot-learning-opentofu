@@ -2,6 +2,8 @@
 # EKS Access Entries — per-user/role IAM RBAC (no shared kubeconfig)
 # ─────────────────────────────────────────────────────────────────────────────
 
+data "aws_caller_identity" "current" {}
+
 locals {
   # Principals that are scoped to specific namespaces (team members, not admins).
   namespace_scoped = {
@@ -45,4 +47,11 @@ resource "aws_eks_access_policy_association" "users" {
   }
 
   depends_on = [aws_eks_access_entry.users]
+}
+
+resource "aws_iam_user_policy_attachment" "local_dev_access" {
+  for_each = local.ns_iam_users
+
+  user       = regex(":user/(.+)$", each.value.principal_arn)[0]
+  policy_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/SignInLocalDevelopmentAccess"
 }

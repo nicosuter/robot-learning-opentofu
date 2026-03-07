@@ -104,7 +104,7 @@ resource "kubectl_manifest" "s3_storageclass" {
     }
     reclaimPolicy        = "Retain"
     volumeBindingMode    = "Immediate"
-    mountOptions = ["allow-delete", "region ${data.aws_region.current.id}"]
+    mountOptions = ["allow-delete", "region ${data.aws_region.current.region}"]
   })
 
   depends_on = [aws_eks_addon.s3_csi]

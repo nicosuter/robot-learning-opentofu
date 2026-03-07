@@ -72,7 +72,7 @@ resource "aws_iam_role_policy" "state_access" {
           "dynamodb:BatchGetItem", "dynamodb:BatchWriteItem",
           "dynamodb:DescribeTable", "dynamodb:ListTables"
         ]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/tofu-state-lock"
+        Resource = "arn:aws:dynamodb:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:table/tofu-state-lock"
       }
     ]
   })

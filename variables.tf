@@ -214,3 +214,11 @@ variable "kubeflow_dashboard_certificate_arn" {
   type        = string
   default     = null
 }
+
+# ── ECR Pull-Through Cache ─────────────────────────────────────────────────────
+
+variable "dockerhub_credentials_secret_arn" {
+  description = "ARN of the AWS Secrets Manager secret containing DockerHub credentials for the ECR pull-through cache. The secret value must be JSON: {\"username\":\"...\",\"accessToken\":\"...\"}. When null, unauthenticated pulls are used (subject to DockerHub anonymous rate limits of 100 req/6 h)."
+  type        = string
+  default     = null
+}

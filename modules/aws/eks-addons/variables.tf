@@ -143,3 +143,8 @@ variable "kubeflow_dashboard_certificate_arn" {
   type        = string
   default     = null
 }
+
+variable "ecr_registry_url" {
+  description = "Private ECR registry URL (account.dkr.ecr.region.amazonaws.com). Injected into every Karpenter node's containerd config so all image pulls for docker.io, ghcr.io, quay.io, registry.k8s.io, and public.ecr.aws are served from the pull-through cache instead of the NAT Gateway."
+  type        = string
+}

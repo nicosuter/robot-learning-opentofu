@@ -75,6 +75,25 @@ resource "aws_iam_role_policy_attachment" "eks_nodes_cni" {
   role       = aws_iam_role.eks_nodes.name
 }
 
+resource "aws_iam_role_policy" "eks_nodes_ecr_ptc" {
+  name = "${var.cluster_name}-nodes-ecr-ptc"
+  role = aws_iam_role.eks_nodes.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        # ECR pull-through cache: on first pull of a cached image, ECR
+        # auto-creates a private repository and imports the upstream layer.
+        # These three actions are required for that flow.
+        Effect   = "Allow"
+        Action   = ["ecr:CreateRepository", "ecr:BatchImportUpstreamImage", "ecr:TagResource"]
+        Resource = "*"
+      },
+    ]
+  })
+}
+
 resource "aws_iam_role_policy" "eks_nodes_ipv6" {
   name = "${var.cluster_name}-nodes-ipv6"
   role = aws_iam_role.eks_nodes.id

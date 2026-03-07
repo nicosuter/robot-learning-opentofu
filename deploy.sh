@@ -14,6 +14,7 @@
 
 set -euo pipefail
 
+
 # Phase 1: AWS-only resources — VPC, EKS cluster + node group, WAF
 echo "==> Phase 1: cluster infrastructure"
 tofu apply \

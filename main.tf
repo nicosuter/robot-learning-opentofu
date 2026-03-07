@@ -198,7 +198,8 @@ module "eks_addons" {
 module "s3_ml_data" {
   source = "./modules/aws/s3"
 
-  bucket_name = var.ml_data_bucket_name
+  bucket_name   = var.ml_data_bucket_name
+  kms_user_arns = [for v in var.cluster_access : v.principal_arn]
 
   tags = var.tags
 
@@ -209,7 +210,8 @@ module "s3_ml_data" {
 module "s3_ml_scripts" {
   source = "./modules/aws/s3"
 
-  bucket_name = var.ml_scripts_bucket_name
+  bucket_name   = var.ml_scripts_bucket_name
+  kms_user_arns = [for v in var.cluster_access : v.principal_arn]
 
   tags = var.tags
 

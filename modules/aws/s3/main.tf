@@ -1,9 +1,36 @@
+data "aws_caller_identity" "current" {}
+
 # KMS key for ML data encryption
 resource "aws_kms_key" "ml_data" {
   description             = "KMS key for ML data bucket: ${var.bucket_name}"
   deletion_window_in_days = 30
   enable_key_rotation     = true
   tags                    = merge(var.tags, { Name = "${var.bucket_name}-kms" })
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = concat(
+      [{
+        Sid       = "RootAccountAdmin"
+        Effect    = "Allow"
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        Action    = "kms:*"
+        Resource  = "*"
+      }],
+      length(var.kms_user_arns) > 0 ? [{
+        Sid       = "AllowKeyUsers"
+        Effect    = "Allow"
+        Principal = { AWS = var.kms_user_arns }
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+          "kms:GenerateDataKeyWithoutPlaintext",
+          "kms:DescribeKey",
+        ]
+        Resource = "*"
+      }] : []
+    )
+  })
 }
 
 resource "aws_kms_alias" "ml_data" {

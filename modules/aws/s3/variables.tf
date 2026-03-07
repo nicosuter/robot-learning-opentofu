@@ -15,6 +15,12 @@ variable "model_transition_days" {
   default     = 90
 }
 
+variable "kms_user_arns" {
+  description = "IAM principal ARNs (users, roles) to grant kms:Decrypt and kms:GenerateDataKey on the bucket KMS key."
+  type        = list(string)
+  default     = []
+}
+
 variable "tags" {
   description = "Common tags to apply to all resources."
   type        = map(string)

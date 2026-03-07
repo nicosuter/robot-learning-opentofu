@@ -86,18 +86,18 @@ jobs:
       - name: Plan
         run: |
           set -o pipefail
-          # ANSI output renders natively in the Actions live log; -out saves the
-          # binary plan so apply executes exactly what was reviewed.
-          tofu plan -out=tfplan 2>&1 | tee plan.ansi
-          # Strip colours for the step summary diff block
-          sed 's/\x1b\[[0-9;]*m//g' plan.ansi > plan.txt
+          # script -q fakes a PTY so tofu keeps ANSI colours; GH Actions renders them natively.
+          script -q -e -c "tofu plan -out=tfplan 2>&1" /dev/null | tee plan.ansi
 
       - name: Post plan to step summary
         if: always()
         run: |
-          echo '```diff' >> $GITHUB_STEP_SUMMARY
-          cat plan.txt  >> $GITHUB_STEP_SUMMARY
-          echo '```'    >> $GITHUB_STEP_SUMMARY
+          [ -f plan.ansi ] || exit 0
+          {
+            echo '```diff'
+            sed 's/\x1b\[[0-9;]*m//g' plan.ansi
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
 
       - name: Upload plan artifact
         uses: actions/upload-artifact@v4

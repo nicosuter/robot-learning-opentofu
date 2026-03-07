@@ -176,7 +176,7 @@ module "eks_addons" {
   argocd_chart_version   = var.argocd_chart_version
   argocd_source_repos    = var.argocd_source_repos
   argocd_hostname        = var.argocd_hostname
-  argocd_certificate_arn = var.argocd_certificate_arn
+  argocd_certificate_arn = var.argocd_hostname != null ? aws_acm_certificate_validation.argocd[0].certificate_arn : null
 
   waf_web_acl_arn = module.waf.web_acl_arn
 

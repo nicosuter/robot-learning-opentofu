@@ -205,8 +205,8 @@ variable "argocd_hostname" {
   default     = null
 }
 
-variable "argocd_certificate_arn" {
-  description = "ACM certificate ARN for the ArgoCD HTTPS listener. Must cover argocd_hostname. Create via AWS Certificate Manager before applying."
+variable "route53_zone_name" {
+  description = "Route 53 hosted zone name used to write DNS validation records for auto-created ACM certificates (e.g. \"ethrc.rgn.dev\"). Required when argocd_hostname is set."
   type        = string
   default     = null
 }

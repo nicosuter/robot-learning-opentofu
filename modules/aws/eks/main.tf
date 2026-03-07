@@ -146,6 +146,31 @@ resource "aws_eks_cluster" "main" {
   ]
 }
 
+# Launch template for the system node group — sets the EC2 instance Name tag and
+# owns disk configuration (required when a launch template is used).
+resource "aws_launch_template" "system" {
+  name_prefix = "${var.cluster_name}-system-"
+
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size           = var.system_node_disk_size
+      volume_type           = "gp3"
+      encrypted             = true
+      delete_on_termination = true
+    }
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+    tags = merge(var.tags, {
+      Name = "${var.cluster_name}-system-1"
+    })
+  }
+
+  tags = var.tags
+}
+
 # System node group — runs cluster-critical workloads (CoreDNS, kube-proxy, Karpenter controller).
 # All workload nodes are provisioned on-demand by Karpenter.
 resource "aws_eks_node_group" "system" {
@@ -154,7 +179,11 @@ resource "aws_eks_node_group" "system" {
   node_role_arn   = aws_iam_role.eks_nodes.arn
   subnet_ids      = var.private_subnet_ids
   instance_types  = ["t3.xlarge"]
-  disk_size       = var.system_node_disk_size
+
+  launch_template {
+    id      = aws_launch_template.system.id
+    version = aws_launch_template.system.latest_version
+  }
 
   scaling_config {
     desired_size = 1

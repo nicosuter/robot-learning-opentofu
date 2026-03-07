@@ -206,12 +206,14 @@ module "s3_ml_data" {
   depends_on = [module.eks]
 }
 
-# ML Scripts S3 Module
+# ML Scripts S3 Module — SSE-S3 (no KMS), scripts are not sensitive
 module "s3_ml_scripts" {
   source = "./modules/aws/s3"
 
-  bucket_name   = var.ml_scripts_bucket_name
+  bucket_name      = var.ml_scripts_bucket_name
+  encrypt_with_kms = false
   kms_user_arns = [for v in var.cluster_access : v.principal_arn]
+
 
   tags = var.tags
 

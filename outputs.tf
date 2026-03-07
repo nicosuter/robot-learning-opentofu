@@ -99,6 +99,11 @@ output "node_iam_role_arn" {
   value       = module.eks.node_iam_role_arn
 }
 
+output "training_role_arn" {
+  description = "IAM role ARN for training workload IRSA. Pods using the training-sa ServiceAccount automatically receive S3 credentials."
+  value       = module.eks_addons.training_role_arn
+}
+
 output "cluster_access_policy_arn" {
   description = "Attach this IAM policy to any user or role that needs kubectl access (grants eks:DescribeCluster). Then add the principal to cluster_access for Kubernetes RBAC."
   value       = module.eks.cluster_access_policy_arn

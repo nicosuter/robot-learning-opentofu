@@ -12,3 +12,8 @@ output "argocd_namespace" {
   description = "Kubernetes namespace where ArgoCD is deployed."
   value       = local.install_argocd ? "argocd" : null
 }
+
+output "training_role_arn" {
+  description = "IAM role ARN for training workload pods (IRSA)."
+  value       = length(var.s3_bucket_arns) > 0 ? aws_iam_role.training[0].arn : null
+}

@@ -65,11 +65,6 @@ variable "api_server_allowed_cidrs" {
   default     = []
 }
 
-variable "ml_scripts_bucket_arn" {
-  description = "ARN of the ML scripts S3 bucket. Namespace-scoped cluster_access entries (those with namespaces set) receive read/write IAM access to this bucket so team members can manage their own scripts."
-  type        = string
-  default     = null
-}
 
 variable "cluster_access" {
   description = "Map of IAM principals to grant cluster access. Keys are friendly names; values specify the principal ARN, EKS access policy, and an optional list of namespaces. When namespaces is non-empty the access entry is scoped to those namespaces only; omit (or leave empty) for cluster-wide access."

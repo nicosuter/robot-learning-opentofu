@@ -120,7 +120,6 @@ module "eks" {
   # Node Group Configuration
   node_disk_size = var.node_disk_size
   cluster_access         = var.cluster_access
-  ml_scripts_bucket_arn  = "arn:aws:s3:::${var.ml_scripts_bucket_name}"
 
   api_server_allowed_cidrs = var.api_server_allowed_cidrs
 
@@ -166,7 +165,7 @@ module "eks_addons" {
   # S3 ARNs have no account/region component (arn:aws:s3:::<name>), so they
   # can be constructed from known variables — keeping for_each keys plan-time-known.
   s3_bucket_arns                    = concat(
-    ["arn:aws:s3:::${var.ml_data_bucket_name}", "arn:aws:s3:::${var.ml_scripts_bucket_name}"],
+    ["arn:aws:s3:::${var.ml_data_bucket_name}"],
     var.s3_bucket_arns,
   )
   gpu_node_max_lifetime             = var.gpu_node_max_lifetime
@@ -200,20 +199,6 @@ module "s3_ml_data" {
 
   bucket_name   = var.ml_data_bucket_name
   kms_user_arns = [for v in var.cluster_access : v.principal_arn]
-
-  tags = var.tags
-
-  depends_on = [module.eks]
-}
-
-# ML Scripts S3 Module — SSE-S3 (no KMS), scripts are not sensitive
-module "s3_ml_scripts" {
-  source = "./modules/aws/s3"
-
-  bucket_name      = var.ml_scripts_bucket_name
-  encrypt_with_kms = false
-  kms_user_arns = [for v in var.cluster_access : v.principal_arn]
-
 
   tags = var.tags
 

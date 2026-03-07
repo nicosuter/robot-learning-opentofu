@@ -32,8 +32,3 @@ output "eks_nodes_security_group_id" {
   description = "Security group ID for EKS nodes"
   value       = aws_security_group.eks_nodes.id
 }
-
-output "nat_gateway_id" {
-  description = "NAT Gateway ID"
-  value       = aws_nat_gateway.main.id
-}

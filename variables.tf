@@ -136,10 +136,6 @@ variable "ml_data_bucket_name" {
   type        = string
 }
 
-variable "ml_scripts_bucket_name" {
-  description = "Name of the S3 bucket for ML scripts. Must be globally unique."
-  type        = string
-}
 
 variable "argocd_enabled" {
   description = "Install ArgoCD for GitOps-driven ML workload management."

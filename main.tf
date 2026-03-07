@@ -144,6 +144,7 @@ module "ecr" {
   name_prefix         = var.cluster_name
   repository_names    = var.ecr_repository_names
   github_repositories = var.ecr_github_repositories
+  ecr_push_iam_users = ["github-cicd"]
 
   tags = var.tags
 }

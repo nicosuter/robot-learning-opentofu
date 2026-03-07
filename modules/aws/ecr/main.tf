@@ -80,9 +80,8 @@ resource "aws_iam_role" "github_actions_ecr" {
   tags = var.tags
 }
 
-resource "aws_iam_role_policy" "github_actions_ecr" {
-  name = "${var.name_prefix}-github-actions-ecr"
-  role = aws_iam_role.github_actions_ecr.id
+resource "aws_iam_policy" "ecr_push" {
+  name = "${var.name_prefix}-ecr-push"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -94,7 +93,7 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
         Resource = "*"
       },
       {
-        Sid    = "AllowPush"
+        Sid    = "AllowPushPull"
         Effect = "Allow"
         Action = [
           "ecr:BatchCheckLayerAvailability",
@@ -112,4 +111,17 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
       },
     ]
   })
+
+  tags = var.tags
+}
+
+resource "aws_iam_role_policy_attachment" "github_actions_ecr" {
+  role       = aws_iam_role.github_actions_ecr.name
+  policy_arn = aws_iam_policy.ecr_push.arn
+}
+
+resource "aws_iam_user_policy_attachment" "ecr_push" {
+  for_each   = toset(var.ecr_push_iam_users)
+  user       = each.value
+  policy_arn = aws_iam_policy.ecr_push.arn
 }

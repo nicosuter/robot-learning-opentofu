@@ -15,9 +15,9 @@ The S3 backend bucket and DynamoDB lock table must exist before `tofu init`. Run
 ```bash
 tofu -chdir=modules/aws/bootstrap init
 tofu -chdir=modules/aws/bootstrap apply \
-  -var="state_bucket_name=<your-state-bucket>" \
-  -var="lock_table_name=tofu-state-lock" \
-  -var="region="us-east-1"
+  -var=state_bucket_name=<your-state-bucket>" \
+  -var=lock_table_name=tofu-state-lock" \
+  -var=region="us-east-1"
 ```
 
 Then fill in `backend.tf` with the bucket and table names you just created.

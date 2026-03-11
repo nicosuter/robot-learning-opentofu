@@ -72,6 +72,7 @@ resource "aws_subnet" "public" {
       Name                                        = "${var.cluster_name}-public-subnet-${count.index + 1}"
       "kubernetes.io/cluster/${var.cluster_name}" = "shared"
       "kubernetes.io/role/elb"                    = "1"
+      "az"                                        = var.availability_zones[count.index]
     }
   )
 
@@ -101,6 +102,7 @@ resource "aws_subnet" "private" {
       "kubernetes.io/cluster/${var.cluster_name}" = "shared"
       "kubernetes.io/role/internal-elb"           = "1"
       "karpenter.sh/discovery"                    = var.cluster_name
+      "az"                                        = var.availability_zones[count.index]
     }
   )
 

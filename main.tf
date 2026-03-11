@@ -108,15 +108,15 @@ module "vpc" {
 }
 
 # EKS Module
-# Note: EKS control plane does not support us-east-1e. We exclude index 4 (us-east-1e) from the subnet lists.
+# Uses eks_*_subnet_ids which filter out AZs not supported by EKS control plane (tag-based filtering).
 module "eks" {
   source = "./modules/aws/eks"
 
   cluster_name              = var.cluster_name
   cluster_version           = var.cluster_version
   vpc_id                    = module.vpc.vpc_id
-  private_subnet_ids        = [for i, id in module.vpc.private_subnet_ids : id if i != 4]
-  public_subnet_ids         = [for i, id in module.vpc.public_subnet_ids : id if i != 4]
+  private_subnet_ids        = module.vpc.eks_private_subnet_ids
+  public_subnet_ids         = module.vpc.eks_public_subnet_ids
   cluster_security_group_id = module.vpc.eks_cluster_security_group_id
 
   # Node Group Configuration

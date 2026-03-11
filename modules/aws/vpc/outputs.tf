@@ -13,14 +13,32 @@ output "vpc_ipv6_cidr_block" {
   value       = local.vpc_ipv6_cidr_block
 }
 
+locals {
+  # EKS control plane AZs are fixed at cluster creation and cannot be changed.
+  # This cluster was created with us-east-1a and us-east-1b only.
+  eks_control_plane_azs = ["us-east-1a", "us-east-1b"]
+}
+
 output "private_subnet_ids" {
-  description = "List of private subnet IDs"
+  description = "List of private subnet IDs (all AZs)"
   value       = aws_subnet.private[*].id
 }
 
 output "public_subnet_ids" {
-  description = "List of public subnet IDs"
+  description = "List of public subnet IDs (all AZs)"
   value       = aws_subnet.public[*].id
+}
+
+# EKS control plane subnets are filtered by AZ tag to match cluster creation AZs.
+# Worker nodes can use all 6 AZs via Karpenter, but control plane cannot be modified.
+output "eks_private_subnet_ids" {
+  description = "List of private subnet IDs for EKS control plane (cluster creation AZs only)"
+  value       = [for s in aws_subnet.private : s.id if contains(local.eks_control_plane_azs, s.tags["az"])]
+}
+
+output "eks_public_subnet_ids" {
+  description = "List of public subnet IDs for EKS control plane (cluster creation AZs only)"
+  value       = [for s in aws_subnet.public : s.id if contains(local.eks_control_plane_azs, s.tags["az"])]
 }
 
 output "eks_cluster_security_group_id" {

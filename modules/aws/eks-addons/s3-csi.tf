@@ -94,7 +94,8 @@ resource "kubectl_manifest" "s3_storageclass" {
     metadata = {
       name = "s3-${regex("[^:]+$", each.key)}"
       annotations = {
-        "mountpoint-s3.csi.aws.com/bucket-name" = regex("[^:]+$", each.key)
+        "mountpoint-s3.csi.aws.com/bucket-name"       = regex("[^:]+$", each.key)
+        # S3 is opt-in; gp3 (EBS CSI) is cluster default.
         "storageclass.kubernetes.io/is-default-class" = "false"
       }
     }

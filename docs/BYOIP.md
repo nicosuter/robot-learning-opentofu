@@ -100,9 +100,9 @@ byoip_ipv6_cidr = "2001:db8:1234::/56"
 
 Then deploy normally — see [QUICKSTART.md](QUICKSTART.md).
 
-Resulting subnet layout (Option A):
-- Private: `2001:db8:1234:0::/64`, `…:1::/64`, `…:2::/64`
-- Public:  `2001:db8:1234:64::/64`, `…:65::/64`, `…:66::/64`
+Resulting subnet layout (Option A with 6 AZs):
+- Private: `2001:db8:1234:0::/64`, `…:1::/64`, `…:2::/64`, `…:3::/64`, `…:4::/64`, `…:5::/64`
+- Public:  `2001:db8:1234:64::/64`, `…:65::/64`, `…:66::/64`, `…:67::/64`, `…:68::/64`, `…:69::/64`
 
 ---
 

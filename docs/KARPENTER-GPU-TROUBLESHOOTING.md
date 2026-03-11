@@ -69,52 +69,7 @@ karpenter.sh/discovery = <cluster_name>
 aws ec2 describe-subnets --filters "Name=tag:karpenter.sh/discovery,Values=<your-cluster-name>" --query 'Subnets[*].[SubnetId,Tags]' --output table
 ```
 
-## 7. PVC Zone Constraints (EFS vs EBS)
-
-**Problem:** Karpenter repeatedly tries to provision in a single AZ (e.g., `us-east-1b`) and fails with `no instance type has the required offering`, even though GPU capacity exists in other AZs.
-
-**Cause:** EBS volumes are zone-bound. If your pod uses PVCs with `storageClassName: gp3`, the pod inherits the volume's AZ constraint and Karpenter must provision in that specific zone—even if it has no GPU capacity there.
-
-**Check PVC zone binding:**
-```bash
-# See which zone your PVCs are bound to
-kubectl get pv <pvc-volume-name> -o json | jq '.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[] | select(.key == "topology.kubernetes.io/zone")'
-```
-
-**Fix options:**
-
-### Option A: Use EFS for Multi-AZ Flexibility
-EFS works across all AZs without topology constraints.
-
-```yaml
-# Use EFS StorageClass instead of gp3
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: my-data
-spec:
-  accessModes: ["ReadWriteMany"]
-  storageClassName: efs  # <-- No zone constraints
-  resources:
-    requests:
-      storage: 50Gi
-```
-
-Delete old EBS PVCs to release the zone lock:
-```bash
-kubectl delete pvc <name> -n <namespace>
-# Recreate with storageClassName: efs
-```
-
-### Option B: Delete Orphaned EBS Volumes
-If deleting PVCs isn't enough, the underlying PVs may be `Released` (retained due to `reclaimPolicy: Retain`). Delete them to allow fresh provisioning in a new AZ:
-
-```bash
-kubectl get pv | grep Released
-kubectl delete pv <orphaned-pv-name>
-```
-
-## 8. Common fixes
+## 7. Common fixes
 
 | Issue | Fix |
 |-------|-----|

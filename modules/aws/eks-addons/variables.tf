@@ -8,6 +8,18 @@ variable "vpc_id" {
   type        = string
 }
 
+variable "private_subnet_ids" {
+  description = "List of private subnet IDs for EFS mount targets."
+  type        = list(string)
+  default     = []
+}
+
+variable "node_security_group_id" {
+  description = "Security group ID for EKS worker nodes (used for EFS access)."
+  type        = string
+  default     = null
+}
+
 variable "oidc_provider_arn" {
   description = "ARN of the EKS OIDC provider (used for IRSA)."
   type        = string

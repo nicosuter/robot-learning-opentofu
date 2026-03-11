@@ -156,6 +156,8 @@ module "eks_addons" {
 
   cluster_name                      = module.eks.cluster_name
   vpc_id                            = module.vpc.vpc_id
+  private_subnet_ids                = module.vpc.private_subnet_ids
+  node_security_group_id            = module.vpc.eks_nodes_security_group_id
   node_tier                         = var.node_tier
   gpu_operator_enabled              = var.gpu_operator_enabled
   gpum_instance_types               = var.gpum_instance_types

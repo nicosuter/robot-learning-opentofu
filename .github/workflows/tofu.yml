@@ -78,6 +78,12 @@ jobs:
           # CI authenticates via environment variables, not a named profile.
           sed -i '/^\s*aws_profile/d' terraform.tfvars
 
+      - name: Cache providers
+        uses: actions/cache@v4
+        with:
+          path: .terraform/providers
+          key: tofu-providers-${{ runner.os }}-${{ hashFiles('.terraform.lock.hcl') }}
+
       - name: Init
         run: tofu init
           -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
@@ -107,6 +113,8 @@ jobs:
           path: |
             tfplan
             .terraform.lock.hcl
+            .terraform/modules
+            .terraform/providers
           retention-days: 7
 
   # ── Apply ──────────────────────────────────────────────────────────────────────
@@ -140,15 +148,15 @@ jobs:
           echo "$TF_VARS" > terraform.tfvars
           sed -i '/^\s*aws_profile/d' terraform.tfvars
 
-      - name: Init
-        run: tofu init
-          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
-          -backend-config="dynamodb_table=${{ secrets.TF_STATE_LOCK_TABLE }}"
-
       - name: Download plan artifact
         uses: actions/download-artifact@v4
         with:
           name: tfplan
+
+      - name: Init (re-use cached providers)
+        run: tofu init
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+          -backend-config="dynamodb_table=${{ secrets.TF_STATE_LOCK_TABLE }}"
 
       - name: Apply
         run: tofu apply -auto-approve tfplan

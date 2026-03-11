@@ -93,9 +93,9 @@ module "vpc" {
   region       = var.region
   vpc_cidr     = var.vpc_cidr
 
-  availability_zones   = coalesce(var.availability_zones, ["${var.region}a", "${var.region}b", "${var.region}c", "${var.region}d", "${var.region}e", "${var.region}f"])
-  private_subnet_cidrs = coalesce(var.private_subnet_cidrs, ["10.0.0.0/19", "10.0.32.0/19", "10.0.128.0/20", "10.0.144.0/20", "10.0.160.0/20", "10.0.224.0/20"])
-  public_subnet_cidrs  = coalesce(var.public_subnet_cidrs, ["10.0.64.0/19", "10.0.96.0/19", "10.0.176.0/20", "10.0.192.0/20", "10.0.208.0/20", "10.0.240.0/20"])
+  availability_zones   = coalesce(var.availability_zones, ["${var.region}a", "${var.region}b", "${var.region}c", "${var.region}d", "${var.region}f"])
+  private_subnet_cidrs = coalesce(var.private_subnet_cidrs, ["10.0.0.0/19", "10.0.32.0/19", "10.0.128.0/20", "10.0.144.0/20", "10.0.160.0/20"])
+  public_subnet_cidrs  = coalesce(var.public_subnet_cidrs, ["10.0.64.0/19", "10.0.96.0/19", "10.0.176.0/20", "10.0.192.0/20", "10.0.208.0/20"])
 
   # IPv6 Configuration
   use_byoip_ipv6            = var.use_byoip_ipv6

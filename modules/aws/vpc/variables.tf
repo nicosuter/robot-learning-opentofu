@@ -17,19 +17,19 @@ variable "vpc_cidr" {
 variable "availability_zones" {
   description = "Availability zones to deploy into. EKS requires at least two AZs."
   type        = list(string)
-  default     = ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1e", "us-east-1f"]
+  default     = ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1f"]
 }
 
 variable "private_subnet_cidrs" {
   description = "CIDR blocks for private subnets (one per AZ)"
   type        = list(string)
-  default     = ["10.0.0.0/19", "10.0.32.0/19", "10.0.128.0/20", "10.0.144.0/20", "10.0.160.0/20", "10.0.224.0/20"]
+  default     = ["10.0.0.0/19", "10.0.32.0/19", "10.0.128.0/20", "10.0.144.0/20", "10.0.160.0/20"]
 }
 
 variable "public_subnet_cidrs" {
   description = "CIDR blocks for public subnets (one per AZ)"
   type        = list(string)
-  default     = ["10.0.64.0/19", "10.0.96.0/19", "10.0.176.0/20", "10.0.192.0/20", "10.0.208.0/20", "10.0.240.0/20"]
+  default     = ["10.0.64.0/19", "10.0.96.0/19", "10.0.176.0/20", "10.0.192.0/20", "10.0.208.0/20"]
 }
 
 variable "use_byoip_ipv6" {

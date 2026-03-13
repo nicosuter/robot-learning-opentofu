@@ -23,7 +23,7 @@ on:
 
 concurrency:
   group: tofu-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true  # Cancel pending workflows on new push, ensuring latest code is always tested/planned
 
 env:
   AWS_REGION: us-east-1

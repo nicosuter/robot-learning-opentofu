@@ -1,0 +1,30 @@
+# LLM Agent Rules for ethrc-opentofu
+
+## CRITICAL: Production Infrastructure Safety
+
+**NEVER** execute infrastructure-modifying commands (apply, destroy, delete-nodegroup, etc.) against production.
+
+**DO:**
+- Modify IaC files (.tf, .tfvars)
+- Run `tofu plan` to show what would happen
+- Provide commands for the human to review and run
+- Edit local state with `tofu state rm` (safe, only affects state file)
+
+**DON'T:**
+- Run `tofu apply`
+- Run `tofu destroy`
+- Run AWS CLI commands that modify resources (delete-nodegroup, terminate-instances, etc.)
+- Assume "just this once" is okay
+
+**Workflow:**
+1. Identify the fix needed
+2. Provide exact commands for human review
+3. Wait for human confirmation before any infra changes
+4. Let human execute the commands themselves
+
+**This applies to:**
+- EKS clusters, node groups, and workloads
+- VPCs, subnets, security groups
+- IAM roles and policies
+- S3 buckets and data
+- Any resource in AWS/production

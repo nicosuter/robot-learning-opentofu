@@ -587,10 +587,16 @@ resource "aws_cloudwatch_event_target" "karpenter_instance_state" {
   arn  = aws_sqs_queue.karpenter_interruption.arn
 }
 
-# Tag subnets for Karpenter node discovery
-# Use index-based keys so for_each is known at plan time (subnet IDs are apply-time only)
-resource "aws_ec2_tag" "karpenter_subnet" {
-  for_each    = { for i, id in (var.use_public_subnets_for_nodes ? var.public_subnet_ids : var.private_subnet_ids) : tostring(i) => id }
+# Tag ALL subnets for Karpenter discovery; worker nodes use public subnets to avoid NAT costs
+resource "aws_ec2_tag" "karpenter_public_subnet" {
+  for_each    = { for i, id in var.public_subnet_ids : tostring(i) => id }
+  resource_id = each.value
+  key         = "karpenter.sh/discovery"
+  value       = var.cluster_name
+}
+
+resource "aws_ec2_tag" "karpenter_private_subnet" {
+  for_each    = { for i, id in var.private_subnet_ids : tostring(i) => id }
   resource_id = each.value
   key         = "karpenter.sh/discovery"
   value       = var.cluster_name

@@ -1,6 +1,6 @@
 # modules/aws/eks
 
-EKS cluster with IPv6 ip_family, a permanent single-node system node group (`t3.small`), Karpenter IAM/IRSA, and RBAC via Access Entries. Workload nodes are provisioned on-demand by Karpenter (configured in `modules/aws/eks-addons`).
+EKS cluster with IPv6 ip_family, a permanent single-node system node group (`t3.xlarge`), Karpenter IAM/IRSA, and RBAC via Access Entries. Workload nodes are provisioned on-demand by Karpenter (configured in `modules/aws/eks-addons`).
 
 ## Usage
 
@@ -110,7 +110,7 @@ nodeSelector:
 
 ## System Node Group
 
-One permanent `t3.small` node (ON_DEMAND) runs 24/7, labelled `node-role=system`. It hosts Karpenter, CoreDNS, and kube-proxy. Karpenter must be running before it can provision workload nodes, so this node group has a fixed size of `min=1 / desired=1 / max=1` with no lifecycle `ignore_changes`.
+One permanent `t3.xlarge` node (ON_DEMAND) runs 24/7, labelled `node-role=system`. It hosts Karpenter, CoreDNS, and kube-proxy. Karpenter must be running before it can provision workload nodes, so this node group has a fixed size of `min=1 / desired=1 / max=1` with no lifecycle `ignore_changes`.
 
 ## Logs
 

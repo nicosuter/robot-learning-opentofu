@@ -73,6 +73,8 @@ resource "aws_subnet" "public" {
       "kubernetes.io/cluster/${var.cluster_name}" = "shared"
       "kubernetes.io/role/elb"                    = "1"
       "az"                                        = var.availability_zones[count.index]
+      "karpenter.sh/discovery"                    = var.cluster_name
+      "karpenter.sh/subnet-type"                  = "public"
     }
   )
 

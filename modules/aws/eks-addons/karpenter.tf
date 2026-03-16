@@ -33,7 +33,7 @@ resource "helm_release" "karpenter" {
   depends_on = [aws_eks_addon.coredns]
 }
 
-# EC2NodeClass — shared node config; subnets + SG discovered via karpenter.sh/discovery tags
+# EC2NodeClass — shared node config; public subnets for direct internet (no NAT)
 resource "kubectl_manifest" "karpenter_node_class" {
   yaml_body = yamlencode({
     apiVersion = "karpenter.k8s.aws/v1"
@@ -42,7 +42,7 @@ resource "kubectl_manifest" "karpenter_node_class" {
     spec = {
       amiSelectorTerms           = [{ alias = "al2023@latest" }]
       role                       = var.node_iam_role_name
-      subnetSelectorTerms        = [{ tags = { "karpenter.sh/discovery" = var.cluster_name } }]
+      subnetSelectorTerms        = [{ tags = { "karpenter.sh/discovery" = var.cluster_name, "karpenter.sh/subnet-type" = "public" } }]
       securityGroupSelectorTerms = [{ tags = { "karpenter.sh/discovery" = var.cluster_name } }]
       tags                       = merge(var.tags, { "karpenter.sh/discovery" = var.cluster_name })
 

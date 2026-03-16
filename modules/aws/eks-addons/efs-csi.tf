@@ -64,6 +64,7 @@ resource "aws_eks_addon" "efs_csi" {
   count        = local.enable_efs_csi ? 1 : 0
   cluster_name = var.cluster_name
   addon_name   = "aws-efs-csi-driver"
+  addon_version = "v2.3.0-eksbuild.2"
 
   service_account_role_arn = aws_iam_role.efs_csi[0].arn
 
@@ -158,4 +159,29 @@ resource "kubectl_manifest" "efs_storageclass" {
   })
 
   depends_on = [aws_eks_addon.efs_csi, aws_efs_mount_target.ml_data]
+}
+
+# Patch EFS CSI node daemonset for Amazon Linux 2023 compatibility.
+# Adds missing /var/run/efs hostPath volume required by amazon-efs-mount-watchdog.
+resource "terraform_data" "efs_csi_node_patch" {
+  count = local.enable_efs_csi ? 1 : 0
+
+  triggers_replace = [
+    aws_eks_addon.efs_csi[0].id
+  ]
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      # Check if patch is already applied (idempotent)
+      if ! kubectl get daemonset efs-csi-node -n kube-system -o json | grep -q "efs-state-dir"; then
+        echo "Applying EFS CSI patch for AL2023..."
+        kubectl patch daemonset efs-csi-node -n kube-system --type='json' -p='[{"op": "add", "path": "/spec/template/spec/volumes/-", "value": {"name": "efs-state-dir", "hostPath": {"path": "/var/run/efs", "type": "DirectoryOrCreate"}}}]' 2>/dev/null || true
+        kubectl patch daemonset efs-csi-node -n kube-system --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/volumeMounts/-", "value": {"mountPath": "/var/run/efs", "name": "efs-state-dir"}}]' 2>/dev/null || true
+      else
+        echo "EFS CSI patch already applied, skipping."
+      fi
+    EOT
+  }
+
+  depends_on = [aws_eks_addon.efs_csi]
 }

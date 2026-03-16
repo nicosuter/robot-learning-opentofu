@@ -21,6 +21,32 @@ resource "kubernetes_namespace" "workload" {
 }
 
 # ──────────────────────────────────────────────
+# ResourceQuotas — per-namespace compute limits
+# ──────────────────────────────────────────────
+
+resource "kubernetes_resource_quota" "workload" {
+  for_each = toset(var.workload_namespaces)
+
+  metadata {
+    name      = "compute-quota"
+    namespace = each.value
+  }
+
+  spec {
+    hard = {
+      "limits.cpu"              = "256"
+      "limits.memory"           = "1024Gi"
+      "limits.nvidia.com/gpu"   = "16"
+      "requests.cpu"            = "256"
+      "requests.memory"         = "1024Gi"
+      "requests.nvidia.com/gpu" = "16"
+    }
+  }
+
+  depends_on = [kubernetes_namespace.workload]
+}
+
+# ──────────────────────────────────────────────
 # AWS-managed EKS add-ons
 # ──────────────────────────────────────────────
 

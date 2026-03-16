@@ -231,3 +231,9 @@ variable "kubeflow_dashboard_certificate_arn" {
   default     = null
 }
 
+variable "use_public_subnets_for_nodes" {
+  description = "Place nodes in public subnets with auto-assigned public IPs."
+  type        = bool
+  default     = true
+}
+

@@ -88,3 +88,9 @@ variable "cluster_access" {
     error_message = "cluster_access policy must be one of: AmazonEKSClusterAdminPolicy, AmazonEKSAdminPolicy, AmazonEKSEditPolicy, AmazonEKSViewPolicy."
   }
 }
+
+variable "use_public_subnets_for_nodes" {
+  description = "Place nodes in public subnets with auto-assigned public IPs."
+  type        = bool
+  default     = false
+}

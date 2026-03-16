@@ -177,7 +177,7 @@ resource "aws_eks_node_group" "system" {
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = "${var.cluster_name}-system"
   node_role_arn   = aws_iam_role.eks_nodes.arn
-  subnet_ids      = var.private_subnet_ids
+  subnet_ids      = var.use_public_subnets_for_nodes ? var.public_subnet_ids : var.private_subnet_ids
   instance_types  = ["t3.xlarge"]
 
   launch_template {
@@ -587,10 +587,10 @@ resource "aws_cloudwatch_event_target" "karpenter_instance_state" {
   arn  = aws_sqs_queue.karpenter_interruption.arn
 }
 
-# Tag private subnets + cluster SG for Karpenter node discovery
+# Tag subnets for Karpenter node discovery
 # Use index-based keys so for_each is known at plan time (subnet IDs are apply-time only)
 resource "aws_ec2_tag" "karpenter_subnet" {
-  for_each    = { for i, id in var.private_subnet_ids : tostring(i) => id }
+  for_each    = { for i, id in (var.use_public_subnets_for_nodes ? var.public_subnet_ids : var.private_subnet_ids) : tostring(i) => id }
   resource_id = each.value
   key         = "karpenter.sh/discovery"
   value       = var.cluster_name

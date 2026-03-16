@@ -125,6 +125,8 @@ module "eks" {
 
   api_server_allowed_cidrs = var.api_server_allowed_cidrs
 
+  use_public_subnets_for_nodes = var.use_public_subnets_for_nodes
+
   tags = var.tags
 }
 

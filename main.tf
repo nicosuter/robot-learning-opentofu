@@ -127,6 +127,12 @@ module "eks" {
 
   use_public_subnets_for_nodes = var.use_public_subnets_for_nodes
 
+  # Hybrid EKS Nodes Configuration
+  enable_hybrid_nodes            = var.enable_hybrid_nodes
+  hybrid_node_registration_limit = var.hybrid_node_registration_limit
+  hybrid_node_cidrs              = var.hybrid_node_cidrs
+  hybrid_node_pod_cidrs          = var.hybrid_node_pod_cidrs
+
   tags = var.tags
 }
 
@@ -193,6 +199,12 @@ module "eks_addons" {
   kubeflow_dashboard_enabled         = var.kubeflow_dashboard_enabled
   kubeflow_dashboard_hostname        = var.kubeflow_dashboard_hostname
   kubeflow_dashboard_certificate_arn = var.kubeflow_dashboard_certificate_arn
+
+  # Tailscale
+  tailscale_enabled             = var.tailscale_enabled
+  tailscale_oauth_client_id     = var.tailscale_oauth_client_id
+  tailscale_oauth_client_secret = var.tailscale_oauth_client_secret
+  tailscale_chart_version       = var.tailscale_chart_version
 
   tags = var.tags
 

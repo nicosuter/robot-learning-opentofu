@@ -156,3 +156,31 @@ variable "kubeflow_dashboard_certificate_arn" {
   default     = null
 }
 
+# ── Tailscale Configuration ───────────────────────────────────────────────────
+
+variable "tailscale_enabled" {
+  description = "Install the Tailscale operator for mesh networking between hybrid nodes and the EKS cluster."
+  type        = bool
+  default     = false
+}
+
+variable "tailscale_oauth_client_id" {
+  description = "Tailscale OAuth client ID for the operator. Required when tailscale_enabled is true."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "tailscale_oauth_client_secret" {
+  description = "Tailscale OAuth client secret for the operator. Required when tailscale_enabled is true."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "tailscale_chart_version" {
+  description = "Version of the Tailscale Helm chart to install."
+  type        = string
+  default     = "1.78.3"
+}
+

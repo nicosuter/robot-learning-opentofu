@@ -607,3 +607,106 @@ resource "aws_ec2_tag" "karpenter_cluster_sg" {
   key         = "karpenter.sh/discovery"
   value       = var.cluster_name
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Hybrid EKS Nodes — IAM role and SSM activation for on-premises infrastructure
+# ─────────────────────────────────────────────────────────────────────────────
+
+# IAM Role for Hybrid EKS Nodes (SSM trust policy for activation)
+resource "aws_iam_role" "hybrid_nodes" {
+  count = var.enable_hybrid_nodes ? 1 : 0
+  name  = "${var.cluster_name}-hybrid-node-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ssm.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.cluster_name}-hybrid-node-role"
+    }
+  )
+}
+
+# Attach required policies to Hybrid Node Role
+resource "aws_iam_role_policy_attachment" "hybrid_eks_worker" {
+  count      = var.enable_hybrid_nodes ? 1 : 0
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.hybrid_nodes[0].name
+}
+
+resource "aws_iam_role_policy_attachment" "hybrid_eks_cni" {
+  count      = var.enable_hybrid_nodes ? 1 : 0
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.hybrid_nodes[0].name
+}
+
+resource "aws_iam_role_policy_attachment" "hybrid_ecr_readonly" {
+  count      = var.enable_hybrid_nodes ? 1 : 0
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.hybrid_nodes[0].name
+}
+
+# SSM policy for hybrid node activation and management
+resource "aws_iam_role_policy_attachment" "hybrid_ssm" {
+  count      = var.enable_hybrid_nodes ? 1 : 0
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  role       = aws_iam_role.hybrid_nodes[0].name
+}
+
+# IPv6 policy for hybrid nodes (matches EC2 node configuration)
+resource "aws_iam_role_policy" "hybrid_nodes_ipv6" {
+  count = var.enable_hybrid_nodes ? 1 : 0
+  name  = "${var.cluster_name}-hybrid-nodes-ipv6"
+  role  = aws_iam_role.hybrid_nodes[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:AssignIpv6Addresses",
+          "ec2:UnassignIpv6Addresses",
+          "ec2:AssignIpv6Prefixes",
+          "ec2:UnassignIpv6Prefixes",
+        ]
+        Resource = "*"
+      },
+    ]
+  })
+}
+
+# SSM Activation for hybrid node registration
+resource "aws_ssm_activation" "hybrid_nodes" {
+  count              = var.enable_hybrid_nodes ? 1 : 0
+  name               = "${var.cluster_name}-hybrid-nodes"
+  iam_role           = aws_iam_role.hybrid_nodes[0].id
+  registration_limit = var.hybrid_node_registration_limit
+  description        = "SSM activation for hybrid EKS nodes in ${var.cluster_name}"
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.cluster_name}-hybrid-nodes"
+    }
+  )
+
+  depends_on = [
+    aws_iam_role_policy_attachment.hybrid_eks_worker,
+    aws_iam_role_policy_attachment.hybrid_eks_cni,
+    aws_iam_role_policy_attachment.hybrid_ecr_readonly,
+    aws_iam_role_policy_attachment.hybrid_ssm,
+    aws_iam_role_policy.hybrid_nodes_ipv6,
+  ]
+}

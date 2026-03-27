@@ -84,3 +84,15 @@ tags = {
   Environment = "production"
   ManagedBy   = "OpenTofu"
 }
+
+# ---- Tailscale -------------------------------------------------------------
+# Mesh networking for secure connectivity to hybrid nodes without VPN.
+# Requires OAuth credentials from the Tailscale admin console.
+#
+# Get OAuth credentials: https://login.tailscale.com/admin/settings/oauth
+# Docs: https://tailscale.com/kb/1236/kubernetes-operator
+
+# tailscale_enabled = false
+# tailscale_chart_version = "1.78.3"
+# tailscale_oauth_client_id = "tskey-client-xxxxxxxxxxxxxxxx"
+# tailscale_oauth_client_secret = "tskey-client-secret-xxxxxxxxxxxxxxxx"

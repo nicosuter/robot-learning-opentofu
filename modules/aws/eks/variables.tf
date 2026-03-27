@@ -94,3 +94,29 @@ variable "use_public_subnets_for_nodes" {
   type        = bool
   default     = false
 }
+
+# ── Hybrid EKS Nodes Configuration ─────────────────────────────────────────────
+
+variable "enable_hybrid_nodes" {
+  description = "Enable support for hybrid EKS nodes (on-premises infrastructure connected to the cluster)."
+  type        = bool
+  default     = false
+}
+
+variable "hybrid_node_registration_limit" {
+  description = "Maximum number of hybrid nodes that can be registered via SSM activation."
+  type        = number
+  default     = 10
+}
+
+variable "hybrid_node_cidrs" {
+  description = "IPv4 CIDR blocks for on-premises hybrid nodes (for remote network config)."
+  type        = list(string)
+  default     = []
+}
+
+variable "hybrid_node_pod_cidrs" {
+  description = "IPv4 CIDR blocks for hybrid node pods (remote pod networks). AWS requires RFC1918 ranges (10/8, 172.16/12, or 192.168/16)."
+  type        = list(string)
+  default     = []
+}

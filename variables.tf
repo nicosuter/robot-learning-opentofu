@@ -237,3 +237,57 @@ variable "use_public_subnets_for_nodes" {
   default     = true
 }
 
+# ── Hybrid EKS Nodes Configuration ─────────────────────────────────────────────
+
+variable "enable_hybrid_nodes" {
+  description = "Enable support for hybrid EKS nodes (on-premises infrastructure connected to the cluster)."
+  type        = bool
+  default     = false
+}
+
+variable "hybrid_node_cidrs" {
+  description = "IPv4 CIDR blocks for on-premises hybrid nodes that need access to the EKS cluster. Only used when enable_hybrid_nodes is true."
+  type        = list(string)
+  default     = []
+}
+
+variable "hybrid_node_pod_cidrs" {
+  description = "IPv4 CIDR blocks for hybrid node pods (remote pod networks). AWS requires RFC1918 ranges (10/8, 172.16/12, or 192.168/16). Must not overlap with VPC CIDR or hybrid_node_cidrs. Only used when enable_hybrid_nodes is true."
+  type        = list(string)
+  default     = []
+}
+
+variable "hybrid_node_registration_limit" {
+  description = "Maximum number of hybrid nodes that can be registered via SSM activation."
+  type        = number
+  default     = 10
+}
+
+# ── Tailscale Configuration ───────────────────────────────────────────────────
+
+variable "tailscale_enabled" {
+  description = "Install the Tailscale operator for mesh networking between hybrid nodes and the EKS cluster."
+  type        = bool
+  default     = false
+}
+
+variable "tailscale_oauth_client_id" {
+  description = "Tailscale OAuth client ID for the operator. Required when tailscale_enabled is true."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "tailscale_oauth_client_secret" {
+  description = "Tailscale OAuth client secret for the operator. Required when tailscale_enabled is true."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "tailscale_chart_version" {
+  description = "Version of the Tailscale Helm chart to install."
+  type        = string
+  default     = "1.78.3"
+}
+

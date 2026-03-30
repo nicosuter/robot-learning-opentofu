@@ -180,7 +180,7 @@ resource "kubectl_manifest" "nodepool_gpul" {
   depends_on = [kubectl_manifest.karpenter_node_class]
 }
 
-# NodePool: h100 — p5.4xlarge (1× H100 80GB), on-demand only
+# NodePool: H100 — p5.4xlarge (1× H100 80GB), on-demand only
 resource "kubectl_manifest" "nodepool_h100" {
   yaml_body = yamlencode({
     apiVersion = "karpenter.sh/v1"
@@ -201,6 +201,62 @@ resource "kubectl_manifest" "nodepool_h100" {
         }
       }
       limits     = { "nvidia.com/gpu" = "8" }
+      disruption = { consolidationPolicy = "WhenEmpty", consolidateAfter = "5m" }
+    }
+  })
+
+  depends_on = [kubectl_manifest.karpenter_node_class]
+}
+
+# NodePool: A100 40GB — p4d.24xlarge (8× A100 40GB), on-demand only
+resource "kubectl_manifest" "nodepool_a100_40" {
+  yaml_body = yamlencode({
+    apiVersion = "karpenter.sh/v1"
+    kind       = "NodePool"
+    metadata   = { name = "a100-40" }
+    spec = {
+      template = {
+        metadata = { labels = { "node-tier" = "a100-40" } }
+        spec = {
+          nodeClassRef = { group = "karpenter.k8s.aws", kind = "EC2NodeClass", name = "default" }
+          expireAfter  = var.gpu_node_max_lifetime
+          requirements = [
+            { key = "karpenter.sh/capacity-type", operator = "In", values = ["on-demand"] },
+            { key = "node.kubernetes.io/instance-type", operator = "In", values = ["p4d.24xlarge"] },
+            { key = "kubernetes.io/arch", operator = "In", values = ["amd64"] },
+          ]
+          taints = [{ key = "nvidia.com/gpu", value = "true", effect = "NoSchedule" }]
+        }
+      }
+      limits     = { "nvidia.com/gpu" = "32" }
+      disruption = { consolidationPolicy = "WhenEmpty", consolidateAfter = "5m" }
+    }
+  })
+
+  depends_on = [kubectl_manifest.karpenter_node_class]
+}
+
+# NodePool: A100 80GB — p4d.24xlarge (8× A100 80GB), on-demand only
+resource "kubectl_manifest" "nodepool_a100_80" {
+  yaml_body = yamlencode({
+    apiVersion = "karpenter.sh/v1"
+    kind       = "NodePool"
+    metadata   = { name = "a100-80" }
+    spec = {
+      template = {
+        metadata = { labels = { "node-tier" = "a100-80" } }
+        spec = {
+          nodeClassRef = { group = "karpenter.k8s.aws", kind = "EC2NodeClass", name = "default" }
+          expireAfter  = var.gpu_node_max_lifetime
+          requirements = [
+            { key = "karpenter.sh/capacity-type", operator = "In", values = ["on-demand"] },
+            { key = "node.kubernetes.io/instance-type", operator = "In", values = ["p4de.24xlarge"] },
+            { key = "kubernetes.io/arch", operator = "In", values = ["amd64"] },
+          ]
+          taints = [{ key = "nvidia.com/gpu", value = "true", effect = "NoSchedule" }]
+        }
+      }
+      limits     = { "nvidia.com/gpu" = "32" }
       disruption = { consolidationPolicy = "WhenEmpty", consolidateAfter = "5m" }
     }
   })

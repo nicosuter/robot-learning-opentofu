@@ -37,28 +37,41 @@ resource "aws_iam_role_policy" "s3_csi" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "ObjectAccess"
+    Statement = concat(
+      [
+        {
+          Sid    = "ObjectAccess"
+          Effect = "Allow"
+          Action = [
+            "s3:GetObject",
+            "s3:PutObject",
+            "s3:AbortMultipartUpload",
+            "s3:DeleteObject",
+          ]
+          Resource = [for arn in var.s3_bucket_arns : "${arn}/*"]
+        },
+        {
+          Sid    = "BucketAccess"
+          Effect = "Allow"
+          Action = [
+            "s3:ListBucket",
+            "s3:GetBucketLocation",
+          ]
+          Resource = var.s3_bucket_arns
+        },
+      ],
+      length(var.s3_bucket_kms_key_arns) > 0 ? [{
+        Sid    = "KmsAccess"
         Effect = "Allow"
         Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:AbortMultipartUpload",
-          "s3:DeleteObject",
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+          "kms:GenerateDataKeyWithoutPlaintext",
+          "kms:DescribeKey",
         ]
-        Resource = [for arn in var.s3_bucket_arns : "${arn}/*"]
-      },
-      {
-        Sid    = "BucketAccess"
-        Effect = "Allow"
-        Action = [
-          "s3:ListBucket",
-          "s3:GetBucketLocation",
-        ]
-        Resource = var.s3_bucket_arns
-      },
-    ]
+        Resource = var.s3_bucket_kms_key_arns
+      }] : []
+    )
   })
 }
 

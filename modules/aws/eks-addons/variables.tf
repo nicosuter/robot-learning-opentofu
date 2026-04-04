@@ -31,6 +31,12 @@ variable "s3_bucket_arns" {
   default     = []
 }
 
+variable "s3_bucket_kms_key_arns" {
+  description = "KMS key ARNs for encrypted S3 buckets accessible to training pods via IRSA. Leave empty when bucket encryption does not use a customer-managed KMS key."
+  type        = list(string)
+  default     = []
+}
+
 variable "node_tier" {
   description = "Compute tier inherited from the EKS module."
   type        = string

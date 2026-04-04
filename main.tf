@@ -27,8 +27,8 @@ terraform {
 
 locals {
   # Append --profile only when a named profile is explicitly set.
-  _profile_args   = var.aws_profile != null ? ["--profile", var.aws_profile] : []
-  eks_token_args  = concat(["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", var.region], local._profile_args)
+  _profile_args  = var.aws_profile != null ? ["--profile", var.aws_profile] : []
+  eks_token_args = concat(["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", var.region], local._profile_args)
 }
 
 # Configure the AWS Provider
@@ -121,7 +121,7 @@ module "eks" {
 
   # Node Group Configuration
   node_disk_size = var.node_disk_size
-  cluster_access         = var.cluster_access
+  cluster_access = var.cluster_access
 
   api_server_allowed_cidrs = var.api_server_allowed_cidrs
 
@@ -153,7 +153,7 @@ module "ecr" {
   name_prefix         = var.cluster_name
   repository_names    = var.ecr_repository_names
   github_repositories = var.ecr_github_repositories
-  ecr_push_iam_users = ["github-cicd"]
+  ecr_push_iam_users  = ["github-cicd"]
 
   tags = var.tags
 }
@@ -176,11 +176,12 @@ module "eks_addons" {
   node_iam_role_name                = module.eks.node_iam_role_name
   # S3 ARNs have no account/region component (arn:aws:s3:::<name>), so they
   # can be constructed from known variables — keeping for_each keys plan-time-known.
-  s3_bucket_arns                    = concat(
+  s3_bucket_arns = concat(
     ["arn:aws:s3:::${var.ml_data_bucket_name}"],
     var.s3_bucket_arns,
   )
-  gpu_node_max_lifetime             = var.gpu_node_max_lifetime
+  s3_bucket_kms_key_arns = module.s3_ml_data.kms_key_arn != null ? [module.s3_ml_data.kms_key_arn] : []
+  gpu_node_max_lifetime  = var.gpu_node_max_lifetime
 
   # ArgoCD
   argocd_enabled         = var.argocd_enabled

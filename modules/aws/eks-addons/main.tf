@@ -111,13 +111,14 @@ resource "aws_eks_addon" "ebs_csi" {
   tags = var.tags
 }
 
-# Set gp3 (EBS CSI) as default StorageClass; remove default from gp2 (legacy in-tree) if present.
+# Set gp3 (EBS CSI) as default StorageClass and enable volume expansion.
 resource "terraform_data" "gp3_default_storageclass" {
   depends_on = [aws_eks_addon.ebs_csi]
 
   provisioner "local-exec" {
     command = <<-EOT
       kubectl patch storageclass gp3 -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}' --type=merge
+      kubectl patch storageclass gp3 -p '{"allowVolumeExpansion":true}' --type=merge
       kubectl patch storageclass gp2 -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":null}}}' --type=merge 2>/dev/null || true
     EOT
   }

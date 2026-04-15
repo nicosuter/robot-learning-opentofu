@@ -128,7 +128,7 @@ variable "s3_bucket_arns" {
 variable "gpu_node_max_lifetime" {
   description = "Hard TTL for gpus/gpum/gpul nodes. Karpenter drains and terminates any node running longer than this duration, regardless of workload state. Go duration syntax (e.g. \"24h\", \"72h\"). Set to \"Never\" to disable."
   type        = string
-  default     = "16h"
+  default     = "48h"
 }
 
 variable "ml_data_bucket_name" {

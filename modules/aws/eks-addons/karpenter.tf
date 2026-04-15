@@ -116,7 +116,7 @@ resource "kubectl_manifest" "nodepool_gpus" {
           taints = [{ key = "nvidia.com/gpu", value = "true", effect = "NoSchedule" }]
         }
       }
-      limits     = { "nvidia.com/gpu" = "8" }
+      limits     = { "nvidia.com/gpu" = "32" }
       disruption = { consolidationPolicy = "WhenEmpty", consolidateAfter = "5m" }
     }
   })
@@ -144,7 +144,7 @@ resource "kubectl_manifest" "nodepool_gpum" {
           taints = [{ key = "nvidia.com/gpu", value = "true", effect = "NoSchedule" }]
         }
       }
-      limits     = { "nvidia.com/gpu" = "8" }
+      limits     = { "nvidia.com/gpu" = "32" }
       disruption = { consolidationPolicy = "WhenEmpty", consolidateAfter = "5m" }
     }
   })
@@ -172,7 +172,7 @@ resource "kubectl_manifest" "nodepool_gpul" {
           taints = [{ key = "nvidia.com/gpu", value = "true", effect = "NoSchedule" }]
         }
       }
-      limits     = { "nvidia.com/gpu" = "8" }
+      limits     = { "nvidia.com/gpu" = "32" }
       disruption = { consolidationPolicy = "WhenEmpty", consolidateAfter = "5m" }
     }
   })
@@ -200,7 +200,7 @@ resource "kubectl_manifest" "nodepool_h100" {
           taints = [{ key = "nvidia.com/gpu", value = "true", effect = "NoSchedule" }]
         }
       }
-      limits     = { "nvidia.com/gpu" = "8" }
+      limits     = { "nvidia.com/gpu" = "32" }
       disruption = { consolidationPolicy = "WhenEmpty", consolidateAfter = "5m" }
     }
   })
@@ -251,6 +251,34 @@ resource "kubectl_manifest" "nodepool_a100_80" {
           requirements = [
             { key = "karpenter.sh/capacity-type", operator = "In", values = ["on-demand"] },
             { key = "node.kubernetes.io/instance-type", operator = "In", values = ["p4de.24xlarge"] },
+            { key = "kubernetes.io/arch", operator = "In", values = ["amd64"] },
+          ]
+          taints = [{ key = "nvidia.com/gpu", value = "true", effect = "NoSchedule" }]
+        }
+      }
+      limits     = { "nvidia.com/gpu" = "32" }
+      disruption = { consolidationPolicy = "WhenEmpty", consolidateAfter = "5m" }
+    }
+  })
+
+  depends_on = [kubectl_manifest.karpenter_node_class]
+}
+
+
+resource "kubectl_manifest" "nodepool_g6e8xlarge" {
+  yaml_body = yamlencode({
+    apiVersion = "karpenter.sh/v1"
+    kind       = "NodePool"
+    metadata   = { name = "g6e8xlarge" }
+    spec = {
+      template = {
+        metadata = { labels = { "node-tier" = "g6e8xlarge" } }
+        spec = {
+          nodeClassRef = { group = "karpenter.k8s.aws", kind = "EC2NodeClass", name = "default" }
+          expireAfter  = var.gpu_node_max_lifetime
+          requirements = [
+            { key = "karpenter.sh/capacity-type", operator = "In", values = ["on-demand"] },
+            { key = "node.kubernetes.io/instance-type", operator = "In", values = ["g6e.8xlarge"] },
             { key = "kubernetes.io/arch", operator = "In", values = ["amd64"] },
           ]
           taints = [{ key = "nvidia.com/gpu", value = "true", effect = "NoSchedule" }]

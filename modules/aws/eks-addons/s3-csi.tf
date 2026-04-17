@@ -79,6 +79,7 @@ resource "aws_eks_addon" "s3_csi" {
   count        = local.install_s3_csi ? 1 : 0
   cluster_name = var.cluster_name
   addon_name   = "aws-mountpoint-s3-csi-driver"
+  addon_version = "v2.5.0-eksbuild.1"
 
   service_account_role_arn = aws_iam_role.s3_csi[0].arn
 
